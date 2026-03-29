@@ -1,8 +1,78 @@
 /**
  * Auto Route Module
- * Модуль автоматического ведения по маршруту с использованием Turf.js
+ * Модуль автоматического ведения по маршруту
+ * Собственные реализации функций (без Turf.js)
  */
 
+// ============================================
+// ГЕО-ФУНКЦИИ (замена Turf.js)
+// ============================================
+const EARTH_RADIUS = 6371000; // метров
+
+/**
+ * Расстояние между двумя точками в метрах (формула гаверсинуса)
+ */
+function _calcDistance(p1, p2) {
+    const [lon1, lat1] = p1.map(d => d * Math.PI / 180);
+    const [lon2, lat2] = p2.map(d => d * Math.PI / 180);
+    const dLat = lat2 - lat1;
+    const dLon = lon2 - lon1;
+    const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) ** 2;
+    return EARTH_RADIUS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+/**
+ * Создание LineString из координат
+ */
+function createLineString(coords) {
+    return { geometry: { coordinates: coords } };
+}
+
+/**
+ * Вычисление длины линии в метрах
+ */
+function getLineLength(lineString) {
+    const coords = lineString.geometry.coordinates;
+    let total = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+        total += _calcDistance(coords[i], coords[i + 1]);
+    }
+    return total;
+}
+
+/**
+ * Получение точки на линии на заданном расстоянии
+ */
+function getPointAlongLine(lineString, dist) {
+    const coords = lineString.geometry.coordinates;
+    let traveled = 0;
+    
+    for (let i = 0; i < coords.length - 1; i++) {
+        const p1 = coords[i];
+        const p2 = coords[i + 1];
+        const segmentDist = _calcDistance(p1, p2);
+        
+        if (traveled + segmentDist >= dist) {
+            const remaining = dist - traveled;
+            const ratio = remaining / segmentDist;
+            return {
+                geometry: {
+                    coordinates: [
+                        p1[0] + (p2[0] - p1[0]) * ratio,
+                        p1[1] + (p2[1] - p1[1]) * ratio
+                    ]
+                }
+            };
+        }
+        traveled += segmentDist;
+    }
+    
+    return { geometry: { coordinates: coords[coords.length - 1] } };
+}
+
+// ============================================
+// МОДУЛЬ
+// ============================================
 const AutoRouteModule = {
     currentIndex: 0,
     speed: 25, // м/сек (90 км/ч)
@@ -96,8 +166,8 @@ const AutoRouteModule = {
         if (validPts.length < 2) { if (onComplete) onComplete(); return; }
 
         try {
-            const lineString = turf.lineString(validPts.map(p => [p[0], p[1]]));
-            const routeLength = turf.length(lineString, {units: 'meters'});
+            const lineString = createLineString(validPts);
+            const routeLength = getLineLength(lineString);
             const duration = (routeLength / speed) * 1000;
             const startTime = performance.now();
             let animationId = null;
@@ -109,7 +179,7 @@ const AutoRouteModule = {
                 const currentDistance = t * routeLength;
 
                 try {
-                    const currentPoint = turf.along(lineString, currentDistance, {units: 'meters'});
+                    const currentPoint = getPointAlongLine(lineString, currentDistance);
                     if (currentPoint?.geometry?.coordinates?.length === 2) {
                         APP.map.update({ location: { center: currentPoint.geometry.coordinates } });
                     }
@@ -165,18 +235,14 @@ const AutoRouteModule = {
         });
 
         // Расчёт длительности сегмента для перехода к следующему
-        if (typeof turf !== 'undefined') {
-            const routeLength = turf.length(
-                turf.lineString(p.pts.map(pt => [pt[0], pt[1]])),
-                { units: 'meters' }
-            );
-            const segmentDuration = (routeLength / this.speed) * 1000;
+        const lineString = createLineString(p.pts);
+        const routeLength = getLineLength(lineString);
+        const segmentDuration = (routeLength / this.speed) * 1000;
 
-            this.timeout = setTimeout(() => {
-                if (!this.isRunning) return;
-                this.currentIndex++;
-                this.playSegment();
-            }, segmentDuration);
-        }
+        this.timeout = setTimeout(() => {
+            if (!this.isRunning) return;
+            this.currentIndex++;
+            this.playSegment();
+        }, segmentDuration);
     }
 };
