@@ -569,11 +569,12 @@ function toggleAutoCenter() {
 // ============================================
 // ОТРИСОВКА МАРШРУТА
 // ============================================
-function getNavIconSvg(col, txt, az, isEnd, isCurr = false, hasComm = false) {
+function getNavIconSvg(col, txt, az, isEnd, isCurr = false, hasComm = false, isPrev = false) {
     const s = isEnd ? 34 : 40, c = s / 2;
-    const strk = isCurr ? '#00FF00' : '#000000';
+    const strk = isCurr ? '#00FF00' : (isPrev ? '#888888' : '#000000');
     const textColor = hasComm ? '#B03050' : '#000000';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}">
+    const opacity = isPrev ? '0.5' : '1';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" opacity="${opacity}">
         <g transform="rotate(${az},${c},${c})">
             <polygon points="${c},2 ${c+10},${s-5} ${c},${s-14} ${c-10},${s-5}" fill="${col}" stroke="${strk}" stroke-width="1.5"/>
         </g>
@@ -614,12 +615,18 @@ function renderRoutePoints() {
         const isPrevious = (i === APP.navCurrentIndex - 1);
         const hasComm = p.comm && p.comm.trim() !== '';
 
-        const showPoint = APP.navPreviewIndex >= 0 ? isPreview : (!isPassed || isCurrent || isPrevious);
-        const showPath = isCurrent || isPreview || isPrevious;
+        const showPoint = APP.navPreviewIndex >= 0
+            ? isPreview
+            : (!isPassed || isCurrent || isPrevious);
+        const showPath = APP.navPreviewIndex >= 0
+            ? isPreview
+            : (isCurrent || isPrevious);
 
         if (!showPoint) return { ...p, placemark: null, line: null, endPlacemark: null, hidden: true };
 
-        const iconUrl = getNavIconSvg(p.hex, p.id, p.az, false, isCurrent, hasComm);
+        // В режиме превью isPrevious всегда false, так как показывается только одна точка
+        const iconIsPrevious = APP.navPreviewIndex >= 0 ? false : isPrevious;
+        const iconUrl = getNavIconSvg(p.hex, p.id, p.az, false, isCurrent, hasComm, iconIsPrevious);
 
         // Используем latLng (конвертированный [lng, lat])
         const placemark = new ymaps3.YMapMarker(
@@ -638,7 +645,8 @@ function renderRoutePoints() {
                 el.style.backgroundSize = 'contain';
                 el.style.backgroundRepeat = 'no-repeat';
                 el.style.cursor = 'pointer';
-                el.onclick = () => {
+                el.onclick = (e) => {
+                    e.stopPropagation();
                     if (i !== APP.navCurrentIndex) showPreview(i);
                     else closePreview();
                 };
@@ -649,6 +657,7 @@ function renderRoutePoints() {
         let line = null, endPlacemark = null;
         if (showPath && p.pts && p.pts.length >= 2) {
             // Линия с обводкой: порядок обратный - первый слой ПОВЕРХ, последний СНИЗУ
+            const lineOpacity = isPrevious ? 0.4 : 1;
             line = new ymaps3.YMapFeature(
                 {
                     geometry: {
@@ -657,8 +666,8 @@ function renderRoutePoints() {
                     },
                     style: {
                         stroke: [
-                            {width: 4, color: p.hex},       // Цветная линия (ПОВЕРХ)
-                            {width: 6, color: '#000000'}    // Черная подложка (СНИЗУ)
+                            {width: 4, color: p.hex, opacity: lineOpacity},       // Цветная линия (ПОВЕРХ)
+                            {width: 6, color: '#000000', opacity: lineOpacity}    // Черная подложка (СНИЗУ)
                         ]
                     }
                 }
@@ -667,7 +676,7 @@ function renderRoutePoints() {
             const last = p.pts[p.pts.length - 1]; // [lng, lat]
             const prev = p.pts[p.pts.length - 2]; // [lng, lat]
             // calcAzimuth ожидает [lat, lon], поэтому меняем местами
-            const endIconUrl = getNavIconSvg(p.hex, p.id, calcAzimuth([prev[1], prev[0]], [last[1], last[0]]), true, isCurrent, hasComm);
+            const endIconUrl = getNavIconSvg(p.hex, p.id, calcAzimuth([prev[1], prev[0]], [last[1], last[0]]), true, isCurrent, hasComm, iconIsPrevious);
 
             endPlacemark = new ymaps3.YMapMarker(
                 {
