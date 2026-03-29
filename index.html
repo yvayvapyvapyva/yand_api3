@@ -790,33 +790,17 @@ function showPreview(i) {
         const firstPt = p.pts[0]; // [lng, lat]
         const lastPt = p.pts[p.pts.length - 1]; // [lng, lat]
 
-        const lngDiff = Math.abs(lastPt[0] - firstPt[0]);
-        const latDiff = Math.abs(lastPt[1] - firstPt[1]);
-
-        const minLng = Math.min(firstPt[0], lastPt[0]);
-        const maxLng = Math.max(firstPt[0], lastPt[0]);
-        const minLat = Math.min(firstPt[1], lastPt[1]);
-        const maxLat = Math.max(firstPt[1], lastPt[1]);
-
-        const lngMargin = (maxLng - minLng) * 0.3 || 0.001;
-        const latMargin = (maxLat - minLat) * 0.3 || 0.001;
-
-        const requiredBounds = [
-            [minLat - latMargin, minLng - lngMargin],
-            [maxLat + latMargin, maxLng + lngMargin]
-        ];
-
         const centerPt = [(firstPt[0] + lastPt[0]) / 2, (firstPt[1] + lastPt[1]) / 2];
-        APP.map.update({
-            location: {
-                center: centerPt
-            }
+        APP.map.setLocation({
+            center: centerPt,
+            duration: 1000,
+            easing: 'ease-in-out'
         });
     } else if (p.pts && p.pts.length > 0) {
-        APP.map.update({
-            location: {
-                center: p.pts[0]
-            }
+        APP.map.setLocation({
+            center: p.pts[0],
+            duration: 1000,
+            easing: 'ease-in-out'
         });
     }
 }
