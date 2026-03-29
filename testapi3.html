@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+    <script crossorigin src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+    <script src="https://api-maps.yandex.ru/v3/?apikey=c0e28937-4e16-4d15-9b99-09a30cb8fc13&lang=ru_RU" type="text/javascript"></script>
+
+    <script data-plugins="transform-modules-umd" data-presets="typescript" type="text/babel">
+      window.map = null;
+
+      main();
+      async function main() {
+          await ymaps3.ready;
+          const {YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapControls} = ymaps3;
+
+          // Регистрируем CDN для загрузки пакетов
+          ymaps3.import.registerCdn('https://cdn.jsdelivr.net/npm/{package}', '@yandex/ymaps3-default-ui-theme@latest');
+
+          const {YMapRotateControl, YMapRotateTiltControl, YMapTiltControl} = await ymaps3.import(
+              '@yandex/ymaps3-default-ui-theme'
+          );
+
+          // Поведения карты включая наклон и поворот
+          const ENABLED_BEHAVIORS = ['drag', 'scrollZoom', 'dblClick', 'mouseTilt', 'mouseRotate'];
+          
+          // Центр карты [долгота, широта]
+          const LOCATION = {
+            center: [37.588144, 55.733842],
+            zoom: 10
+          };
+
+          map = new YMap(
+            document.getElementById('app'),
+            {location: LOCATION, behaviors: ENABLED_BEHAVIORS},
+            [
+              new YMapDefaultSchemeLayer({}),
+              new YMapDefaultFeaturesLayer({})
+            ]
+          );
+
+          map.addChild(
+              new YMapControls({position: 'right'}, [
+                  new YMapRotateTiltControl({}),
+                  new YMapRotateControl({}),
+                  new YMapTiltControl({})
+              ])
+          );
+      }
+    </script>
+
+    <style>
+      html, body, #app {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

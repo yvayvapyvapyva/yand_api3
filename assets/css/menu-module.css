@@ -1,0 +1,150 @@
+/* Menu Module Styles */
+
+/* Кнопка меню - овальная */
+#menuBtn {
+    position: absolute;
+    top: calc(16px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9005;
+    width: auto;
+    padding: 0 16px;
+    border-radius: 100px;
+    height: 56px;
+    gap: 8px;
+    background: var(--dark-panel);
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
+    border: 1px solid var(--border);
+    color: var(--btn-txt);
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+}
+#menuBtn svg { flex-shrink: 0; }
+#menuBtn span { font-size: 13px; font-weight: 700; white-space: nowrap; }
+#menuBtn:active { transform: translateX(-50%) scale(0.95); background: rgba(30,32,40,0.9); }
+
+/* Модальное окно - панель на почти весь экран */
+#jsonModal {
+    position: fixed;
+    top: calc(16px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    z-index: 10000;
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s, opacity 0.3s;
+    width: 95%;
+    max-width: 95%;
+}
+#jsonModal.hidden {
+    transform: translateX(-50%) translateY(-100px);
+    opacity: 0;
+    pointer-events: none;
+}
+#jsonModal:not(.hidden) {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.modal-sheet {
+    width: 100%;
+    max-height: calc(100vh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    background: var(--dark-panel);
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+.modal-title {
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+    color: #fff;
+}
+.modal-input {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(40,42,50,0.5);
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    outline: none;
+    margin-top: 16px;
+}
+.modal-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+.modal-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.modal-btn:active { transform: scale(0.98); }
+.modal-btn-green { background: rgba(52,199,89,0.42); border: 1px solid rgba(103,255,153,0.45); color: #fff; }
+.modal-btn-muted { background: rgba(40,40,45,0.3); border: 1px solid var(--border); color: #fff; }
+
+/* Список маршрутов */
+.routes-list {
+    margin-top: 16px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px;
+}
+
+.route-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(40,42,50,0.5);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+    text-align: left;
+    width: 100%;
+}
+
+.route-item:active {
+    transform: scale(0.98);
+    background: rgba(52,199,89,0.3);
+}
+
+.route-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+}
+
+.route-id {
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
+    font-family: monospace;
+}
