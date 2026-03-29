@@ -7,6 +7,7 @@
     <script src="https://api-maps.yandex.ru/v3/?apikey=c0e28937-4e16-4d15-9b99-09a30cb8fc13&lang=ru_RU" type="text/javascript"></script>
     <script crossorigin src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
     <script src="https://unpkg.com/@vkontakte/vk-bridge@latest/dist/browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <link rel="stylesheet" href="assets/css/menu-module.css">
     <!-- Список маршрутов -->
     <script src="assets/js/routes-list.js"></script>
@@ -787,6 +788,69 @@ function updateHudDist(d, ad) {
     compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
 }
 
+// Анимация камеры вдоль пути сегмента маршрута с использованием Turf.js
+function animateAlongPath(pts, duration = 2000) {
+    if (!pts || pts.length < 2) return;
+
+    // Проверяем валидность координат
+    const validPts = pts.filter(p => p && p.length === 2 && 
+                                     typeof p[0] === 'number' && 
+                                     typeof p[1] === 'number' &&
+                                     isFinite(p[0]) && isFinite(p[1]));
+    
+    if (validPts.length < 2) return;
+
+    try {
+        // Создаём LineString из точек маршрута
+        const lineString = turf.lineString(validPts.map(p => [p[0], p[1]]));
+        const routeLength = turf.length(lineString, {units: 'meters'});
+        
+        const startTime = performance.now();
+
+        function animateStep(currentTime) {
+            const elapsed = currentTime - startTime;
+            
+            // Защита от отрицательного времени
+            if (elapsed < 0) {
+                requestAnimationFrame(animateStep);
+                return;
+            }
+            
+            const t = Math.min(elapsed / duration, 1);
+
+            // Текущая дистанция вдоль маршрута
+            const currentDistance = Math.max(0, t * routeLength);
+
+            try {
+                // Получаем координаты на текущей дистанции
+                const currentPoint = turf.along(lineString, currentDistance, {units: 'meters'});
+                
+                if (currentPoint && currentPoint.geometry && 
+                    currentPoint.geometry.coordinates && 
+                    currentPoint.geometry.coordinates.length === 2) {
+                    const coordinates = currentPoint.geometry.coordinates;
+
+                    APP.map.update({
+                        location: {
+                            center: coordinates
+                        }
+                    });
+                }
+            } catch (e) {
+                // Игнорируем ошибки turf.along
+            }
+
+            if (t < 1) {
+                requestAnimationFrame(animateStep);
+            }
+        }
+
+        requestAnimationFrame(animateStep);
+    } catch (e) {
+        // Игнорируем ошибки
+    }
+}
+
 function showPreview(i) {
     const p = APP.navPoints[i];
     if (!p) return;
@@ -796,24 +860,27 @@ function showPreview(i) {
     renderRoutePoints();
 
     if (p.pts && p.pts.length >= 2) {
-        const firstPt = p.pts[0]; // [lng, lat] - начало сегмента
-        const lastPt = p.pts[p.pts.length - 1]; // [lng, lat] - конец сегмента
+        const firstPt = p.pts[0];
 
-        // Вычисляем центр сегмента
-        const centerLng = (firstPt[0] + lastPt[0]) / 2;
-        const centerLat = (firstPt[1] + lastPt[1]) / 2;
-
-        // Устанавливаем местоположение с плавной анимацией (зум не меняем)
-        APP.map.setLocation({
-            center: [centerLng, centerLat],
-            duration: 1000,
-            easing: 'ease-in-out'
+        // Сначала быстро перемещаемся к началу сегмента
+        APP.map.update({
+            location: {
+                center: [firstPt[0], firstPt[1]],
+                zoom: 16
+            },
+            duration: 500
         });
+
+        // Затем плавно движемся вдоль пути сегмента
+        setTimeout(() => {
+            animateAlongPath(p.pts, 2000);
+        }, 500);
     } else if (p.pts && p.pts.length > 0) {
-        APP.map.setLocation({
-            center: p.pts[0],
-            duration: 1000,
-            easing: 'ease-in-out'
+        APP.map.update({
+            location: {
+                center: p.pts[0]
+            },
+            duration: 500
         });
     }
 }
