@@ -111,6 +111,8 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                     this.isTransition=false;
                     appRef.navCurrentIndex=this.currentIndex;appRef.navPreviewIndex=-1;
                     if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
+                    // Воспроизводим команду и начинаем основной сегмент
+                    if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
                     this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();});
                 });
                 return;
@@ -119,6 +121,12 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         
         appRef.navCurrentIndex=this.currentIndex;appRef.navPreviewIndex=-1;
         if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
-        this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();});
+        // Воспроизводим команду по завершении анимации сегмента (когда достигнута следующая точка)
+        this.animateAlongPath(p.pts,this.speed,()=>{
+            if(!this.isRunning)return;
+            if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
+            this.currentIndex++;
+            this.playSegment();
+        });
     }
 };
