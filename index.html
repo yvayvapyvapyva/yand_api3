@@ -995,6 +995,9 @@ function loadRouteFromJSON(data) {
 }
 
 function processRouteData(data, name) {
+    // Очищаем предыдущий маршрут
+    clearRoute();
+    
     startWakeLock();
 
     if (!data || !Array.isArray(data)) {
