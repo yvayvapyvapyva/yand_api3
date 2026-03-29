@@ -241,8 +241,20 @@ function updateHudDist(d,ad){
 // ============================================
 // НАВИГАЦИЯ ПО ТОЧКАМ
 // ============================================
-function showPreview(i){const p=APP.navPoints[i];if(!p)return;$('pointsList').style.display='none';APP.navPreviewIndex=i;updateHud();renderRoutePoints();if(p.pts?.length>=2)APP.map.update({location:{center:p.pts[0]}});}
-function showPreviewWithAnimation(i){const p=APP.navPoints[i];if(!p)return;$('pointsList').style.display='none';APP.navPreviewIndex=i;updateHud();renderRoutePoints();if(p.pts?.length>=2)APP.map.update({location:{center:p.pts[0]}});}
+function showPreview(i){const p=APP.navPoints[i];if(!p)return;$('pointsList').style.display='none';APP.navPreviewIndex=i;updateHud();renderRoutePoints();if(p.pts?.length>=2)smoothPreviewTo(p.pts[0]);}
+function showPreviewWithAnimation(i){const p=APP.navPoints[i];if(!p)return;$('pointsList').style.display='none';APP.navPreviewIndex=i;updateHud();renderRoutePoints();if(p.pts?.length>=2)smoothPreviewTo(p.pts[0]);}
+
+// Плавное перемещение камеры (используем встроенную анимацию Yandex Maps)
+function smoothPreviewTo(targetCoords){
+    if(!APP.map)return;
+    APP.map.update({
+        location:{
+            center:targetCoords,
+            duration:800,  // 800мс
+            easing:'ease-in-out'  // Плавное начало и конец
+        }
+    });
+}
 function setTarget(i){APP.navCurrentIndex=i;APP.navPreviewIndex=-1;renderRoutePoints();updateHud();$('pointsList').style.display='none';if(APP.lastPos&&APP.navPoints[APP.navCurrentIndex]){const t=APP.navPoints[APP.navCurrentIndex],d=calcDistance(APP.lastPos,t.pts[0]);let ad=Math.abs(APP.lastAz-t.az)%360;if(ad>180)ad=360-ad;const compass=$('hudCompass');if(compass)compass.classList.toggle('in-range',ad<=APP.navConfig.AZ_TOLERANCE);$('hudDist').textContent=`${Math.round(d)}`;$('hudDist').classList.toggle('in-range',d<=APP.navConfig.TRIGGER_DIST);}}
 function closePreview(){APP.navPreviewIndex=-1;renderRoutePoints();updateHud();if(APP.lastPos&&APP.navPoints[APP.navCurrentIndex]){const t=APP.navPoints[APP.navCurrentIndex],d=calcDistance(APP.lastPos,t.pts[0]);let ad=Math.abs(APP.lastAz-t.az)%360;if(ad>180)ad=360-ad;const compass=$('hudCompass');if(compass)compass.classList.toggle('in-range',ad<=APP.navConfig.AZ_TOLERANCE);$('hudDist').textContent=`${Math.round(d)}`;$('hudDist').classList.toggle('in-range',d<=APP.navConfig.TRIGGER_DIST);}}
 
