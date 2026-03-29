@@ -787,12 +787,16 @@ function showPreview(i) {
     renderRoutePoints();
 
     if (p.pts && p.pts.length >= 2) {
-        const firstPt = p.pts[0]; // [lng, lat]
-        const lastPt = p.pts[p.pts.length - 1]; // [lng, lat]
+        const firstPt = p.pts[0]; // [lng, lat] - начало сегмента
+        const lastPt = p.pts[p.pts.length - 1]; // [lng, lat] - конец сегмента
 
-        const centerPt = [(firstPt[0] + lastPt[0]) / 2, (firstPt[1] + lastPt[1]) / 2];
+        // Вычисляем центр сегмента
+        const centerLng = (firstPt[0] + lastPt[0]) / 2;
+        const centerLat = (firstPt[1] + lastPt[1]) / 2;
+
+        // Устанавливаем местоположение с плавной анимацией (зум не меняем)
         APP.map.setLocation({
-            center: centerPt,
+            center: [centerLng, centerLat],
             duration: 1000,
             easing: 'ease-in-out'
         });
