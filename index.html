@@ -873,7 +873,7 @@ function renderPointsList() {
                           isPrevious ? 'background:rgba(255,255,255,0.5);color:black' :
                           isPassed ? 'background:rgba(255,255,255,0.2)' : '';
         const opacity = isPrevious ? 0.6 : (isPassed && !isPreview ? 0.4 : 1);
-        return `<div class="point-item ${isCurrent || isPreview ? 'active' : ''}" onclick="showPreview(${i});" style="opacity:${opacity}">
+        return `<div class="point-item ${isCurrent || isPreview ? 'active' : ''}" onclick="selectPointFromList(${i});" style="opacity:${opacity}">
             <div class="point-badge" style="${badgeStyle}">${p.id}</div>
             <div class="point-content">
                 <div class="point-name" style="display:flex; align-items:center; gap:6px;">
@@ -881,12 +881,15 @@ function renderPointsList() {
                     ${hasComm ? '<span style="display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; background:rgba(255,149,0,0.9); border-radius:50%; color:#fff; font-size:13px; font-weight:800; flex-shrink:0;">i</span>' : ''}
                 </div>
             </div>
-            <button class="action-icon-btn" onclick="event.stopPropagation(); playCommand('${cmdSafe}');">
-                <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-            </button>
         </div>`;
     }).join('');
 }
+
+function selectPointFromList(i) {
+    showPreview(i);
+    $('pointsList').style.display = 'none';
+}
+window.selectPointFromList = selectPointFromList;
 
 function togglePointsList() {
     const menu = $('pointsList');
