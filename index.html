@@ -589,7 +589,6 @@ function clearRoute() {
         APP.navPoints.forEach(p => {
             if (p.placemark) APP.map.removeChild(p.placemark);
             if (p.line) APP.map.removeChild(p.line);
-            if (p.lineOutline) APP.map.removeChild(p.lineOutline);
             if (p.endPlacemark) APP.map.removeChild(p.endPlacemark);
         });
     }
@@ -604,7 +603,6 @@ function renderRoutePoints() {
         APP.navPoints.forEach(p => {
             if (p.placemark) APP.map.removeChild(p.placemark);
             if (p.line) APP.map.removeChild(p.line);
-            if (p.lineOutline) APP.map.removeChild(p.lineOutline);
             if (p.endPlacemark) APP.map.removeChild(p.endPlacemark);
         });
     }
@@ -648,27 +646,9 @@ function renderRoutePoints() {
             })()
         );
 
-        let line = null, lineOutline = null, endPlacemark = null;
+        let line = null, endPlacemark = null;
         if (showPath && p.pts && p.pts.length >= 2) {
-            const isCurrentOrPreview = isCurrent || isPreview;
-
-            // В API v3 используем YMapFeature с LineString
-            if (isCurrentOrPreview) {
-                lineOutline = new ymaps3.YMapFeature(
-                    {
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: p.pts
-                        },
-                        style: {
-                            strokeColor: '#000000',
-                            strokeWidth: 6,
-                            strokeOpacity: 1
-                        }
-                    }
-                );
-            }
-
+            // Линия с обводкой: порядок обратный - первый слой ПОВЕРХ, последний СНИЗУ
             line = new ymaps3.YMapFeature(
                 {
                     geometry: {
@@ -676,9 +656,10 @@ function renderRoutePoints() {
                         coordinates: p.pts
                     },
                     style: {
-                        strokeColor: p.hex,
-                        strokeWidth: isCurrent ? 4 : (isPreview || isPrevious ? 4 : 2),
-                        strokeOpacity: isCurrent ? 1 : (isPreview ? 1 : (isPrevious ? 0.5 : 0.4))
+                        stroke: [
+                            {width: 4, color: p.hex},       // Цветная линия (ПОВЕРХ)
+                            {width: 6, color: '#000000'}    // Черная подложка (СНИЗУ)
+                        ]
                     }
                 }
             );
@@ -709,12 +690,11 @@ function renderRoutePoints() {
 
         if (APP.map) {
             APP.map.addChild(placemark);
-            if (lineOutline) APP.map.addChild(lineOutline);
             if (line) APP.map.addChild(line);
             if (endPlacemark) APP.map.addChild(endPlacemark);
         }
 
-        return { ...p, placemark, line, lineOutline, endPlacemark, hidden: false };
+        return { ...p, placemark, line, endPlacemark, hidden: false };
     });
 
     renderPointsList();
