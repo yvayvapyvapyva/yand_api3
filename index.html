@@ -9,18 +9,22 @@
     <script src="https://unpkg.com/@vkontakte/vk-bridge@latest/dist/browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
     <link rel="stylesheet" href="assets/css/menu-module.css">
-    <!-- Список маршрутов -->
     <script src="assets/js/routes-list.js"></script>
     <script src="assets/js/menu-module.js"></script>
     <script src="assets/js/auto-module.js"></script>
     <style>
     :root {
         --bg: #050505;
-        --dark-panel: linear-gradient(180deg, rgba(20,20,20,0.85), rgba(10,10,10,0.8));
+        --dark-panel: rgba(20,20,20,0.85);
         --btn-txt: #ffffff;
         --border: rgba(255,255,255,0.25);
         --panel-blur: blur(22px);
         --target-lime: #00FF00;
+        --safe-top: env(safe-area-inset-top);
+        --safe-bottom: env(safe-area-inset-bottom);
+        --btn-size: 56px;
+        --btn-radius: 50%;
+        --shadow: 0 10px 25px rgba(0,0,0,0.22);
     }
     html, body {
         margin: 0; padding: 0; height: 100%; width: 100%;
@@ -41,57 +45,43 @@
     }
     .loading-overlay.hidden { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
 
-    /* Wake Lock видео - невидимое */
+    /* Wake Lock видео */
     #wakeLockVideo {
-        position: fixed;
-        width: 1px;
-        height: 1px;
-        opacity: 0.001;
-        pointer-events: none;
-        z-index: -9999;
+        position: fixed; width: 1px; height: 1px;
+        opacity: 0.001; pointer-events: none; z-index: -9999;
     }
 
-    /* Общие стили кнопок */
+    /* Базовые стили кнопок */
     .circle-btn {
         position: absolute; z-index: 9005;
-        background: var(--dark-panel);
-        backdrop-filter: var(--panel-blur);
+        background: var(--dark-panel); backdrop-filter: var(--panel-blur);
         -webkit-backdrop-filter: var(--panel-blur);
-        width: 56px; height: 56px; border-radius: 50%;
-        border: 1px solid var(--border);
-        color: var(--btn-txt);
-        cursor: pointer;
-        transition: transform 0.15s, background 0.15s;
+        width: var(--btn-size); height: var(--btn-size); border-radius: var(--btn-radius);
+        border: 1px solid var(--border); color: var(--btn-txt);
+        cursor: pointer; transition: transform 0.15s, background 0.15s;
         display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+        box-shadow: var(--shadow);
     }
     .circle-btn svg { fill: currentColor; width: 24px; height: 24px; }
     .circle-btn:active { transform: scale(0.95); background: rgba(30,32,40,0.9); }
     .circle-btn.active { background: rgba(52,199,89,0.42); border-color: rgba(103,255,153,0.45); }
-    #listBtn { top: calc(16px + env(safe-area-inset-top)); left: 16px; }
-    #locateBtn { top: calc(16px + env(safe-area-inset-top)); right: 16px; }
-    #autoRouteBtn { top: calc(82px + env(safe-area-inset-top)); left: 16px; }
+    #listBtn { top: calc(16px + var(--safe-top)); left: 16px; }
+    #locateBtn { top: calc(16px + var(--safe-top)); right: 16px; }
+    #autoRouteBtn { top: calc(82px + var(--safe-top)); left: 16px; }
 
     /* Телеметрия */
     #telemetryPanel {
         position: absolute;
-        top: calc(16px + env(safe-area-inset-top) + 66px); right: 16px;
+        top: calc(16px + var(--safe-top) + 66px); right: 16px;
         z-index: 9005;
-        background: var(--dark-panel);
-        backdrop-filter: var(--panel-blur);
+        background: var(--dark-panel); backdrop-filter: var(--panel-blur);
         -webkit-backdrop-filter: var(--panel-blur);
-        border-radius: 50%;
-        border: 1px solid var(--border);
-        cursor: pointer;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+        border-radius: 50%; border: 1px solid var(--border);
+        box-shadow: var(--shadow);
         transition: transform 0.15s, background 0.15s;
-        width: 56px; height: 56px;
-        box-sizing: border-box;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
+        width: var(--btn-size); height: var(--btn-size);
+        box-sizing: border-box; display: none;
+        flex-direction: column; align-items: center; justify-content: center; gap: 4px;
         padding: 8px;
     }
     #telemetryPanel.visible { display: flex; }
@@ -99,22 +89,19 @@
     .tel-item { display: flex; flex-direction: column; align-items: center; }
     .tel-label { font-size: 8px; color: #aaa; font-weight: 700; text-transform: uppercase; }
     .tel-value { font-size: 13px; font-weight: 800; text-align: center; }
-    .tel-divider { height: 1px; width: 100%; background: rgba(255,255,255,0.15); margin: 4px 0; display: none; }
 
     /* HUD */
     #hud {
         position: absolute;
-        bottom: calc(24px + env(safe-area-inset-bottom));
+        bottom: calc(24px + var(--safe-bottom));
         left: 16px; right: 16px; z-index: 9000;
-        background: var(--dark-panel);
-        backdrop-filter: var(--panel-blur);
+        background: var(--dark-panel); backdrop-filter: var(--panel-blur);
         -webkit-backdrop-filter: var(--panel-blur);
         border-radius: 20px; padding: 16px; color: var(--btn-txt);
         border: 1px solid var(--border);
         box-shadow: 0 12px 24px rgba(0,0,0,0.22);
         display: none; flex-direction: column; gap: 8px;
-        pointer-events: auto;
-        width: calc(100% - 32px); box-sizing: border-box;
+        pointer-events: auto; width: calc(100% - 32px); box-sizing: border-box;
     }
     #hud.active { display: flex; }
     .hud-header { display: flex; align-items: center; gap: 10px; }
@@ -142,97 +129,59 @@
     .stat-value.in-range { color: var(--target-lime); }
     .stat-label-unit { font-size: 10px; color: #888; font-weight: 700; }
 
-    /* Компас в HUD панели */
-    .hud-stats .azimuth-compass {
+    /* Компас */
+    .azimuth-compass {
         width: 32px; height: 32px; border-radius: 50%;
         background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.3);
         position: relative; display: flex; align-items: center; justify-content: center;
-        transition: background 0.3s, border-color 0.3s;
-        flex-shrink: 0;
+        transition: background 0.3s, border-color 0.3s; flex-shrink: 0;
     }
-    .hud-stats .azimuth-compass.in-range {
+    .azimuth-compass.in-range {
         background: rgba(0,255,0,0.15); border-color: var(--target-lime);
     }
-    .hud-stats .compass-arrow {
-        width: 2px; height: 26px;
-        margin-top: -13px;
-    }
-    .hud-stats .compass-arrow::before {
-        height: 20px;
-    }
-    .hud-stats .compass-arrow::after {
-        border-left: 3px solid transparent;
-        border-right: 3px solid transparent;
-        border-bottom: 5px solid currentColor;
-        top: -4px;
-    }
-    .hud-stats .compass-center {
-        width: 5px; height: 5px;
-    }
-
-    /* Базовые стили компаса */
     .compass-arrow {
         position: absolute; width: 2px; height: 26px;
-        transform-origin: center center; top: 50%;
-        margin-top: -13px; border-radius: 2px; transition: transform 0.3s ease-out;
+        transform-origin: center center; top: 50%; margin-top: -13px;
+        border-radius: 2px; transition: transform 0.3s ease-out;
         display: flex; flex-direction: column; align-items: center;
     }
-    .compass-arrow::after {
-        content: '';
-        width: 0; height: 0;
-        border-left: 3px solid transparent;
-        border-right: 3px solid transparent;
-        border-bottom: 5px solid currentColor;
-        position: absolute; top: -4px;
-    }
     .compass-arrow::before {
-        content: '';
-        width: 2px; height: 20px;
-        border-radius: 2px;
+        content: ''; width: 2px; height: 20px; border-radius: 2px;
     }
-    .compass-arrow-user {
-        color: #FF3B30;
-        z-index: 2;
+    .compass-arrow::after {
+        content: ''; width: 0; height: 0;
+        border-left: 3px solid transparent; border-right: 3px solid transparent;
+        border-bottom: 5px solid currentColor; position: absolute; top: -4px;
     }
-    .compass-arrow-user::before {
-        background: linear-gradient(to top, #FF3B30, #FF6B6B);
-    }
-    .compass-arrow-target {
-        color: #007AFF;
-        z-index: 1; opacity: 0.8;
-    }
-    .compass-arrow-target::before {
-        background: linear-gradient(to top, #007AFF, #5AC8FA);
-    }
+    .compass-arrow-user { color: #FF3B30; z-index: 2; }
+    .compass-arrow-user::before { background: linear-gradient(to top, #FF3B30, #FF6B6B); }
+    .compass-arrow-target { color: #007AFF; z-index: 1; opacity: 0.8; }
+    .compass-arrow-target::before { background: linear-gradient(to top, #007AFF, #5AC8FA); }
     .compass-center {
         width: 5px; height: 5px; border-radius: 50%;
         background: rgba(255,255,255,0.5); z-index: 3;
     }
+
+    /* Элементы управления */
     .action-icon-btn {
         width: 36px; height: 36px; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(255,255,255,0.12);
-        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.12); border: 1px solid var(--border);
         cursor: pointer; flex-shrink: 0;
     }
     .action-icon-btn svg { fill: #f3f4f6; width: 20px; height: 20px; }
     #selectBtn {
-        padding: 10px 16px; border-radius: 10px;
-        border: 1px solid var(--border);
-        background: rgba(52,199,89,0.42);
-        border-color: rgba(103,255,153,0.45);
+        padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border);
+        background: rgba(52,199,89,0.42); border-color: rgba(103,255,153,0.45);
         color: #fff; font-size: 14px; font-weight: 700;
-        cursor: pointer;
-        transition: transform 0.15s, background 0.15s;
+        cursor: pointer; transition: transform 0.15s, background 0.15s;
     }
     #selectBtn:active { transform: scale(0.95); }
     .nav-arrow-btn {
         width: 40px; height: 40px; border-radius: 10px;
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.4);
+        background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
         display: flex; align-items: center; justify-content: center;
-        cursor: pointer; flex-shrink: 0;
-        transition: background 0.15s, transform 0.15s;
+        cursor: pointer; flex-shrink: 0; transition: background 0.15s, transform 0.15s;
     }
     .nav-arrow-btn svg { fill: #ffffff; width: 24px; height: 24px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8)); }
     .nav-arrow-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
@@ -241,21 +190,17 @@
     /* Список точек */
     #pointsList {
         position: absolute;
-        top: calc(16px + env(safe-area-inset-top) + 66px);
-        bottom: calc(24px + env(safe-area-inset-bottom) + 150px);
-        left: 16px;
-        width: calc(100% - 32px);
-        background: var(--dark-panel);
-        backdrop-filter: var(--panel-blur);
+        top: calc(16px + var(--safe-top) + 66px);
+        bottom: calc(24px + var(--safe-bottom) + 150px);
+        left: 16px; width: calc(100% - 32px);
+        background: var(--dark-panel); backdrop-filter: var(--panel-blur);
         -webkit-backdrop-filter: var(--panel-blur);
         border-radius: 14px; border: 1px solid var(--border);
         z-index: 9700; box-shadow: 0 20px 40px rgba(0,0,0,0.35);
-        pointer-events: auto;
-        display: none; flex-direction: column; overflow: hidden;
+        pointer-events: auto; display: none; flex-direction: column; overflow: hidden;
     }
     #pointsList .header {
-        padding: 12px 16px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1);
         font-weight: 800; font-size: 11px; text-align: center;
         color: rgba(255,255,255,0.5); text-transform: uppercase;
     }
@@ -275,28 +220,23 @@
         min-width: 24px; height: 24px; border-radius: 8px;
         background: rgba(255,255,255,0.1);
         font-size: 11px; font-weight: 800;
-        display: flex; align-items: center; justify-content: center;
-        margin-top: 4px;
+        display: flex; align-items: center; justify-content: center; margin-top: 4px;
     }
     .active .point-badge { background: rgba(255,255,255,0.24); color: #fff; }
     .point-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-    .point-name {
-        font-size: 15px; font-weight: 600; line-height: 1.3;
-        color: #fff; word-wrap: break-word;
-    }
+    .point-name { font-size: 15px; font-weight: 600; line-height: 1.3; color: #fff; word-wrap: break-word; }
 
     /* Комментарий */
     #commentBlock {
         display: none; margin-bottom: 10px; padding: 10px;
-        background: rgba(255,149,0,0.15);
-        border-radius: 10px; border: 1px solid rgba(255,149,0,0.4);
+        background: rgba(255,149,0,0.15); border-radius: 10px;
+        border: 1px solid rgba(255,149,0,0.4);
     }
     #commentBlock.visible { display: block; }
     #commentText { font-size: 12px; line-height: 1.5; color: #e5e7eb; white-space: pre-wrap; }
     #closeCommentBtn {
         width: 20px; height: 20px; border-radius: 6px;
-        background: rgba(255,149,0,0.3);
-        border: 1px solid rgba(255,149,0,0.5);
+        background: rgba(255,149,0,0.3); border: 1px solid rgba(255,149,0,0.5);
         color: #fff; display: flex; align-items: center; justify-content: center;
         cursor: pointer; font-size: 14px; line-height: 1; flex-shrink: 0;
     }
@@ -304,7 +244,7 @@
     /* Toast */
     #toast {
         position: fixed;
-        top: calc(80px + env(safe-area-inset-top)); left: 50%;
+        top: calc(80px + var(--safe-top)); left: 50%;
         transform: translateX(-50%) translateY(-100px);
         background: var(--dark-panel); color: #ffffff;
         padding: 14px 24px; border-radius: 16px;
@@ -320,9 +260,6 @@
     #toast.success { background: rgba(52,199,89,0.95); }
     #toast.error { background: rgba(255,59,48,0.95); }
     #toast.info { background: rgba(0,0,0,0.82); }
-
-    /* Wake lock */
-    #v { position: fixed; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -332,17 +269,16 @@
     <div id="errorMsg" style="color: #FF3B30; display: none; margin-top: 10px;"></div>
 </div>
 
-<!-- Wake Lock видео - зацикленное видео для предотвращения гашения экрана -->
 <video id="wakeLockVideo" playsinline muted loop></video>
 
 <div id="map"></div>
-<button id="listBtn" class="circle-btn">
+<button id="listBtn" class="circle-btn" aria-label="Список точек">
     <svg viewBox="0 0 24 24"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg>
 </button>
-<button id="locateBtn" class="circle-btn">
+<button id="locateBtn" class="circle-btn" aria-label="Геолокация">
     <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
 </button>
-<button id="autoRouteBtn" class="circle-btn" title="Ведение по маршруту" style="top: calc(82px + env(safe-area-inset-top)); left: 16px;">
+<button id="autoRouteBtn" class="circle-btn" title="Ведение по маршруту" aria-label="Авто-ведение">
     <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
 </button>
 
@@ -360,12 +296,12 @@
     <div class="hud-header">
         <span class="hud-index" id="hudIndex">1</span>
         <div class="hud-cmd" id="hudCmd">Маршрут не выбран</div>
-        <button id="speakBtn" class="action-icon-btn" style="width:40px;height:40px;flex-shrink:0;">
+        <button id="speakBtn" class="action-icon-btn" aria-label="Воспроизвести">
             <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
         </button>
     </div>
     <div class="hud-actions">
-        <button id="prevBtn" class="nav-arrow-btn" title="Предыдущая точка">
+        <button id="prevBtn" class="nav-arrow-btn" title="Предыдущая точка" aria-label="Предыдущая">
             <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
         </button>
         <div class="hud-stats">
@@ -381,7 +317,7 @@
         <div style="display:flex; gap:8px; flex:1; justify-content:center; align-items:center;">
             <button id="selectBtn" style="display:none;">Выбрать</button>
         </div>
-        <button id="nextBtn" class="nav-arrow-btn" title="Следующая точка">
+        <button id="nextBtn" class="nav-arrow-btn" title="Следующая точка" aria-label="Следующая">
             <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
         </button>
     </div>
@@ -395,7 +331,7 @@
 
 <script data-plugins="transform-modules-umd" data-presets="typescript" type="text/babel">
 // ============================================
-// КОНФИГУРАЦИЯ
+// КОНФИГУРАЦИЯ И УТИЛИТЫ
 // ============================================
 const COLORS = {
     Gold: { hex: '#FFD700' }, Blue: { hex: '#007AFF' }, Red: { hex: '#FF3B30' },
@@ -404,24 +340,17 @@ const COLORS = {
 };
 
 const APP = {
-    map: null,
-    userMarker: null,
-    userMarkerEl: null,
-    lastPos: null,
-    lastAz: 0,
-    autoCenter: false,
-    currentSpeed: 0,
-    navPoints: [],
-    navCurrentIndex: 0,
-    navPreviewIndex: -1,
+    map: null, userMarker: null, userMarkerEl: null,
+    lastPos: null, lastAz: 0, autoCenter: false, currentSpeed: 0,
+    navPoints: [], navCurrentIndex: 0, navPreviewIndex: -1,
     navAudio: new Audio(),
     navConfig: { TRIGGER_DIST: 25, AZ_TOLERANCE: 45, SPEED_THRESHOLD: 2 }
 };
 
-// Делаем APP глобальным для доступа из других модулей
 window.APP = APP;
-
 const $ = id => document.getElementById(id);
+const toRad = deg => deg * Math.PI / 180;
+const toDeg = rad => rad * 180 / Math.PI;
 
 // ============================================
 // VK MINI APPS
@@ -434,19 +363,37 @@ if (typeof vkBridge !== 'undefined') {
 // УВЕДОМЛЕНИЯ
 // ============================================
 let toastTimer = null;
-
 function showToast(text, type = 'info', duration = 2000) {
     const el = $('toast');
     el.textContent = text;
     el.className = `toast ${type} show`;
-
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
 // ============================================
-// ГЕОЛОКАЦИЯ
+// ГЕОЛОКАЦИЯ И РАССТОЯНИЯ
 // ============================================
+function calcAzimuth(p1, p2) {
+    if (!p1 || !p2) return 0;
+    const [la1, lo1] = p1.map(toRad);
+    const [la2, lo2] = p2.map(toRad);
+    const y = Math.sin(lo2 - lo1) * Math.cos(la2);
+    const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(lo2 - lo1);
+    return Math.round((toDeg(Math.atan2(y, x)) + 360) % 360);
+}
+
+function calcDistance(p1, p2) {
+    if (!p1 || !p2) return 0;
+    const R = 6371000;
+    const [lng1, lat1] = p1.map(toRad);
+    const [lng2, lat2] = p2.map(toRad);
+    const dLat = lat2 - lat1;
+    const dLon = lng2 - lng1;
+    const a = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function getUserLocSvg(azimuth = 0) {
     return 'data:image/svg+xml;utf8,' + encodeURIComponent(
         `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
@@ -457,117 +404,61 @@ function getUserLocSvg(azimuth = 0) {
     );
 }
 
-function calcAzimuth(p1, p2) {
-    if (!p1 || !p2) return 0;
-    // p1 и p2 в формате [lat, lon] для расчёта азимута (старый формат)
-    const [la1, lo1] = p1.map(v => v * Math.PI / 180);
-    const [la2, lo2] = p2.map(v => v * Math.PI / 180);
-    const y = Math.sin(lo2 - lo1) * Math.cos(la2);
-    const x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(lo2 - lo1);
-    return Math.round((Math.atan2(y, x) * 180 / Math.PI + 360) % 360);
-}
-
-function calcDistance(p1, p2) {
-    if (!p1 || !p2) return 0;
-    const R = 6371000;
-    // p1 и p2 в формате [lng, lat] для API v3
-    const [lng1, lat1] = p1.map(v => v * Math.PI / 180);
-    const [lng2, lat2] = p2.map(v => v * Math.PI / 180);
-    const dLat = lat2 - lat1;
-    const dLon = lng2 - lng1;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1) * Math.cos(lat2) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
-
 function initGeolocation() {
-    if (navigator.geolocation) {
-        console.log('[Geo] Запрос геолокации...');
-        
-        navigator.geolocation.watchPosition(
-            (pos) => {
-                // В API v3 координаты: [долгота, широта] (lng, lat)
-                const coords = [pos.coords.longitude, pos.coords.latitude];
-                const speed = (pos.coords.speed || 0) * 3.6;
-                
-                // Логирование позиции
-                console.log('[Geo] Позиция:', {
-                    lat: coords[1],
-                    lon: coords[0],
-                    accuracy: pos.coords.accuracy,
-                    speed: speed.toFixed(1) + ' км/ч',
-                    heading: pos.coords.heading
-                });
-                
-                if (APP.lastPos && speed >= APP.navConfig.SPEED_THRESHOLD)
-                    // APP.lastPos и coords в формате [lng, lat], а calcAzimuth ожидает [lat, lon]
-                    APP.lastAz = calcAzimuth([APP.lastPos[1], APP.lastPos[0]], [coords[1], coords[0]]);
-                APP.lastPos = coords;
-                APP.currentSpeed = speed;
-
-                if (APP.userMarker && APP.userMarkerEl) {
-                    console.log('[Marker] Обновляю позицию:', coords);
-                    // Обновляем координаты
-                    APP.userMarker.update({
-                        coordinates: coords
-                    });
-                    // Поворачиваем стрелку по азимуту
-                    const arrowEl = APP.userMarkerEl.querySelector('#user-arrow');
-                    if (arrowEl) {
-                        arrowEl.setAttribute('transform', `rotate(${APP.lastAz}, 20, 20)`);
-                    }
-                    console.log('[Marker] Позиция обновлена, азимут:', APP.lastAz);
-                } else {
-                    console.warn('[Marker] Маркер не найден!');
-                }
-                $('telSpeed').textContent = Math.round(APP.currentSpeed);
-
-                // Обновляем компас если маршрут загружен
-                const previewIndex = APP.navPreviewIndex >= 0 ? APP.navPreviewIndex : APP.navCurrentIndex;
-                if (previewIndex >= 0 && APP.navPoints[previewIndex]) {
-                    const t = APP.navPoints[previewIndex];
-                    let ad = Math.abs(APP.lastAz - t.az) % 360;
-                    if (ad > 180) ad = 360 - ad;
-                    const compass = $('hudCompass');
-                    const userArrow = $('hudUserArrow');
-                    const targetArrow = $('hudTargetArrow');
-                    if (compass && userArrow && targetArrow) {
-                        userArrow.style.transform = `rotate(${APP.lastAz}deg)`;
-                        targetArrow.style.transform = `rotate(${t.az}deg)`;
-                        compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
-                    }
-                }
-
-                if (APP.autoCenter && APP.map) {
-                    APP.map.update({
-                        location: {
-                            center: coords
-                        }
-                    });
-                }
-                if (APP.navCurrentIndex >= 0 && APP.navPreviewIndex < 0) navCheckTriggers();
-            },
-            (err) => {
-                console.error('[Geo] Ошибка:', err.code, err.message);
-            },
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-        );
-    } else {
-        console.error('[Geo] Геолокация не поддерживается браузером');
+    if (!navigator.geolocation) {
+        console.error('[Geo] Не поддерживается');
+        return;
     }
+
+    navigator.geolocation.watchPosition(
+        (pos) => {
+            const coords = [pos.coords.longitude, pos.coords.latitude];
+            const speed = (pos.coords.speed || 0) * 3.6;
+
+            if (APP.lastPos && speed >= APP.navConfig.SPEED_THRESHOLD) {
+                APP.lastAz = calcAzimuth([APP.lastPos[1], APP.lastPos[0]], [coords[1], coords[0]]);
+            }
+            APP.lastPos = coords;
+            APP.currentSpeed = speed;
+
+            if (APP.userMarker && APP.userMarkerEl) {
+                APP.userMarker.update({ coordinates: coords });
+                const arrowEl = APP.userMarkerEl.querySelector('#user-arrow');
+                if (arrowEl) arrowEl.setAttribute('transform', `rotate(${APP.lastAz}, 20, 20)`);
+            }
+
+            $('telSpeed').textContent = Math.round(APP.currentSpeed);
+
+            const previewIndex = APP.navPreviewIndex >= 0 ? APP.navPreviewIndex : APP.navCurrentIndex;
+            if (previewIndex >= 0 && APP.navPoints[previewIndex]) {
+                const t = APP.navPoints[previewIndex];
+                let ad = Math.abs(APP.lastAz - t.az) % 360;
+                if (ad > 180) ad = 360 - ad;
+                const compass = $('hudCompass');
+                const userArrow = $('hudUserArrow');
+                const targetArrow = $('hudTargetArrow');
+                if (compass && userArrow && targetArrow) {
+                    userArrow.style.transform = `rotate(${APP.lastAz}deg)`;
+                    targetArrow.style.transform = `rotate(${t.az}deg)`;
+                    compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
+                }
+            }
+
+            if (APP.autoCenter && APP.lastPos) {
+                APP.map.update({ location: { center: APP.lastPos } });
+            }
+            if (APP.navCurrentIndex >= 0 && APP.navPreviewIndex < 0) navCheckTriggers();
+        },
+        (err) => console.error('[Geo] Ошибка:', err.code, err.message),
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
 }
 
 function toggleAutoCenter() {
     APP.autoCenter = !APP.autoCenter;
     $('locateBtn').classList.toggle('active', APP.autoCenter);
     if (APP.autoCenter && APP.lastPos) {
-        APP.map.update({
-            location: {
-                center: APP.lastPos
-            }
-        });
+        APP.map.update({ location: { center: APP.lastPos } });
     }
     showToast(APP.autoCenter ? 'Привязка включена' : 'Привязка отключена');
 }
@@ -590,7 +481,6 @@ function getNavIconSvg(col, txt, az, isEnd, isCurr = false, hasComm = false, isP
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
-// Очистка маршрута с карты
 function clearRoute() {
     if (APP.map && APP.navPoints) {
         APP.navPoints.forEach(p => {
@@ -621,83 +511,49 @@ function renderRoutePoints() {
         const isPrevious = (i === APP.navCurrentIndex - 1);
         const hasComm = p.comm && p.comm.trim() !== '';
 
-        const showPoint = APP.navPreviewIndex >= 0
-            ? isPreview
-            : (!isPassed || isCurrent || isPrevious);
-        const showPath = APP.navPreviewIndex >= 0
-            ? isPreview
-            : (isCurrent || isPrevious);
+        const showPoint = APP.navPreviewIndex >= 0 ? isPreview : (!isPassed || isCurrent || isPrevious);
+        const showPath = APP.navPreviewIndex >= 0 ? isPreview : (isCurrent || isPrevious);
 
         if (!showPoint) return { ...p, placemark: null, line: null, endPlacemark: null, hidden: true };
 
-        // В режиме превью isPrevious всегда false, так как показывается только одна точка
         const iconIsPrevious = APP.navPreviewIndex >= 0 ? false : isPrevious;
         const iconUrl = getNavIconSvg(p.hex, p.id, p.az, false, isCurrent, hasComm, iconIsPrevious);
 
-        // Используем latLng (конвертированный [lng, lat])
         const placemark = new ymaps3.YMapMarker(
-            {
-                coordinates: p.pts[0], // [lng, lat]
-                zIndex: (isCurrent || isPreview) ? 1000 : (isPassed ? 600 : 500)
-            },
-            // Создаём DOM-элемент для маркера
+            { coordinates: p.pts[0], zIndex: (isCurrent || isPreview) ? 1000 : (isPassed ? 600 : 500) },
             (() => {
                 const el = document.createElement('div');
-                el.style.width = '40px';
-                el.style.height = '40px';
-                // Центрируем маркер: координата указывает на центр элемента
-                el.style.transform = 'translate(-50%, -50%)';
+                el.style.cssText = 'width:40px;height:40px;transform:translate(-50%,-50%);background-size:contain;background-repeat:no-repeat;cursor:pointer;';
                 el.style.backgroundImage = `url(${iconUrl})`;
-                el.style.backgroundSize = 'contain';
-                el.style.backgroundRepeat = 'no-repeat';
-                el.style.cursor = 'pointer';
-                el.onclick = (e) => {
-                    e.stopPropagation();
-                    if (i !== APP.navCurrentIndex) showPreview(i);
-                    else closePreview();
-                };
+                el.onclick = (e) => { e.stopPropagation(); if (i !== APP.navCurrentIndex) showPreview(i); else closePreview(); };
                 return el;
             })()
         );
 
         let line = null, endPlacemark = null;
         if (showPath && p.pts && p.pts.length >= 2) {
-            // Линия с обводкой: порядок обратный - первый слой ПОВЕРХ, последний СНИЗУ
             const lineOpacity = isPrevious ? 0.4 : 1;
             line = new ymaps3.YMapFeature(
                 {
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: p.pts
-                    },
+                    geometry: { type: 'LineString', coordinates: p.pts },
                     style: {
                         stroke: [
-                            {width: 4, color: p.hex, opacity: lineOpacity},       // Цветная линия (ПОВЕРХ)
-                            {width: 6, color: '#000000', opacity: lineOpacity}    // Черная подложка (СНИЗУ)
+                            {width: 4, color: p.hex, opacity: lineOpacity},
+                            {width: 6, color: '#000000', opacity: lineOpacity}
                         ]
                     }
                 }
             );
 
-            const last = p.pts[p.pts.length - 1]; // [lng, lat]
-            const prev = p.pts[p.pts.length - 2]; // [lng, lat]
-            // calcAzimuth ожидает [lat, lon], поэтому меняем местами
+            const last = p.pts[p.pts.length - 1];
+            const prev = p.pts[p.pts.length - 2];
             const endIconUrl = getNavIconSvg(p.hex, p.id, calcAzimuth([prev[1], prev[0]], [last[1], last[0]]), true, isCurrent, hasComm, iconIsPrevious);
 
             endPlacemark = new ymaps3.YMapMarker(
-                {
-                    coordinates: last
-                },
+                { coordinates: last },
                 (() => {
                     const el = document.createElement('div');
-                    el.style.width = '34px';
-                    el.style.height = '34px';
-                    // Центрируем маркер: координата указывает на центр элемента
-                    el.style.transform = 'translate(-50%, -50%)';
-                    el.style.backgroundImage = `url(${endIconUrl})`;
-                    el.style.backgroundSize = 'contain';
-                    el.style.backgroundRepeat = 'no-repeat';
-                    el.style.pointerEvents = 'none'; // Неинтерактивный
+                    el.style.cssText = `width:34px;height:34px;transform:translate(-50%,-50%);background-image:url(${endIconUrl});background-size:contain;background-repeat:no-repeat;pointer-events:none;`;
                     return el;
                 })()
             );
@@ -725,36 +581,28 @@ function updateHud() {
     $('hudIndex').textContent = idx + 1;
     $('hudCmd').textContent = t.cmd;
     $('speakBtn').onclick = () => playCommand(t.cmd);
-
     $('selectBtn').style.display = isPreview ? 'block' : 'none';
     if (isPreview) $('selectBtn').onclick = () => setTarget(idx);
-
     document.querySelector('.hud-stats').style.display = 'flex';
 
     const compass = $('hudCompass');
     const targetArrow = $('hudTargetArrow');
-    if (compass && targetArrow) {
-        targetArrow.style.transform = `rotate(${t.az}deg)`;
-    }
+    if (compass && targetArrow) targetArrow.style.transform = `rotate(${t.az}deg)`;
 
     if (APP.lastPos) {
-        // t.pts[0] = [lng, lat], APP.lastPos = [lng, lat]
         const d = calcDistance(APP.lastPos, t.pts[0]);
         let ad = Math.abs(APP.lastAz - t.az) % 360;
         if (ad > 180) ad = 360 - ad;
+
         $('hudDist').textContent = `${Math.round(d)}`;
         $('hudDist').classList.toggle('in-range', d <= APP.navConfig.TRIGGER_DIST);
 
-        const compass = $('hudCompass');
         const userArrow = $('hudUserArrow');
-        const targetArrow = $('hudTargetArrow');
         if (userArrow && targetArrow) {
             userArrow.style.transform = `rotate(${APP.lastAz || 0}deg)`;
             targetArrow.style.transform = `rotate(${t.az || 0}deg)`;
         }
-        if (compass) {
-            compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
-        }
+        if (compass) compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
     } else if (!isPreview) {
         $('hudDist').textContent = '---';
         $('hudDist').classList.remove('in-range');
@@ -789,147 +637,32 @@ function updateHudDist(d, ad) {
         userArrow.style.transform = `rotate(${APP.lastAz || 0}deg)`;
         targetArrow.style.transform = `rotate(${targetPoint.az || 0}deg)`;
     }
-
-    compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
+    if (compass) compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
 }
 
-// Анимация камеры вдоль пути сегмента маршрута с использованием Turf.js
-// speed - скорость в м/сек (по умолчанию 5 м/сек = 18 км/ч)
-// onComplete - функция вызываемая после завершения анимации
-function animateAlongPath(pts, speed = 5, onComplete = null) {
-    // Если авто-ведение остановлено, не запускаем анимацию
-    if (!window.isAutoRouteRunning && !onComplete) return;
-    
-    if (!pts || pts.length < 2) {
-        if (onComplete) onComplete();
-        return;
-    }
-
-    // Проверяем валидность координат
-    const validPts = pts.filter(p => p && p.length === 2 && 
-                                     typeof p[0] === 'number' && 
-                                     typeof p[1] === 'number' &&
-                                     isFinite(p[0]) && isFinite(p[1]));
-    
-    if (validPts.length < 2) {
-        if (onComplete) onComplete();
-        return;
-    }
-
-    try {
-        // Создаём LineString из точек маршрута
-        const lineString = turf.lineString(validPts.map(p => [p[0], p[1]]));
-        const routeLength = turf.length(lineString, {units: 'meters'});
-        
-        // Рассчитываем длительность анимации на основе скорости
-        const duration = (routeLength / speed) * 1000;
-
-        const startTime = performance.now();
-        let animationId = null;
-
-        function animateStep(currentTime) {
-            // Проверяем флаг остановки
-            if (!window.isAutoRouteRunning) {
-                cancelAnimationFrame(animationId);
-                return;
-            }
-            
-            const elapsed = currentTime - startTime;
-            const t = Math.min(elapsed / duration, 1);
-
-            // Текущая дистанция вдоль маршрута
-            const currentDistance = t * routeLength;
-
-            try {
-                // Получаем координаты на текущей дистанции
-                const currentPoint = turf.along(lineString, currentDistance, {units: 'meters'});
-                
-                if (currentPoint && currentPoint.geometry && 
-                    currentPoint.geometry.coordinates && 
-                    currentPoint.geometry.coordinates.length === 2) {
-                    const coordinates = currentPoint.geometry.coordinates;
-
-                    APP.map.update({
-                        location: {
-                            center: coordinates
-                        }
-                    });
-                }
-            } catch (e) {
-                // Игнорируем ошибки turf.along
-            }
-
-            if (t < 1) {
-                animationId = requestAnimationFrame(animateStep);
-            } else {
-                if (onComplete) onComplete();
-            }
-        }
-
-        animationId = requestAnimationFrame(animateStep);
-    } catch (e) {
-        // Игнорируем ошибки
-        if (onComplete) onComplete();
-    }
-}
-
-// Делаем функции глобальными для доступа из других модулей
-window.animateAlongPath = animateAlongPath;
-
-// Мгновенный переход к точке (для списка точек и клика по маркеру)
+// ============================================
+// НАВИГАЦИЯ ПО ТОЧКАМ
+// ============================================
 function showPreview(i) {
     const p = APP.navPoints[i];
     if (!p) return;
-
     $('pointsList').style.display = 'none';
     APP.navPreviewIndex = i;
     updateHud();
     renderRoutePoints();
-
-    if (p.pts && p.pts.length >= 2) {
-        const firstPt = p.pts[0];
-
-        // Мгновенное перемещение к первой точке сегмента
-        APP.map.update({
-            location: {
-                center: firstPt
-            }
-        });
-    } else if (p.pts && p.pts.length > 0) {
-        APP.map.update({
-            location: {
-                center: p.pts[0]
-            }
-        });
-    }
+    if (p.pts?.length >= 2) APP.map.update({ location: { center: p.pts[0] } });
+    else if (p.pts?.length > 0) APP.map.update({ location: { center: p.pts[0] } });
 }
 
-// Мгновенный переход к точке (для стрелок вперёд/назад)
 function showPreviewWithAnimation(i) {
     const p = APP.navPoints[i];
     if (!p) return;
-
     $('pointsList').style.display = 'none';
     APP.navPreviewIndex = i;
     updateHud();
     renderRoutePoints();
-
-    if (p.pts && p.pts.length >= 2) {
-        const firstPt = p.pts[0];
-        
-        // Мгновенное перемещение к первой точке сегмента
-        APP.map.update({
-            location: {
-                center: firstPt
-            }
-        });
-    } else if (p.pts && p.pts.length > 0) {
-        APP.map.update({
-            location: {
-                center: p.pts[0]
-            }
-        });
-    }
+    if (p.pts?.length >= 2) APP.map.update({ location: { center: p.pts[0] } });
+    else if (p.pts?.length > 0) APP.map.update({ location: { center: p.pts[0] } });
 }
 
 function setTarget(i) {
@@ -945,9 +678,7 @@ function setTarget(i) {
         let ad = Math.abs(APP.lastAz - t.az) % 360;
         if (ad > 180) ad = 360 - ad;
         const compass = $('hudCompass');
-        if (compass) {
-            compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
-        }
+        if (compass) compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
         $('hudDist').textContent = `${Math.round(d)}`;
         $('hudDist').classList.toggle('in-range', d <= APP.navConfig.TRIGGER_DIST);
     }
@@ -964,9 +695,7 @@ function closePreview() {
         let ad = Math.abs(APP.lastAz - t.az) % 360;
         if (ad > 180) ad = 360 - ad;
         const compass = $('hudCompass');
-        if (compass) {
-            compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
-        }
+        if (compass) compass.classList.toggle('in-range', ad <= APP.navConfig.AZ_TOLERANCE);
         $('hudDist').textContent = `${Math.round(d)}`;
         $('hudDist').classList.toggle('in-range', d <= APP.navConfig.TRIGGER_DIST);
     }
@@ -980,7 +709,6 @@ function renderPointsList() {
         const isCurrent = i === APP.navCurrentIndex;
         const isPreview = i === APP.navPreviewIndex;
         const isPrevious = i === APP.navCurrentIndex - 1;
-        const cmdSafe = p.cmd.replace(/'/g, "\\'");
         const hasComm = p.comm && p.comm.trim() !== '';
         const badgeStyle = isCurrent ? 'background:#00FF00;color:black' :
                           isPreview ? 'background:rgba(61,160,255,0.6);color:black' :
@@ -1065,17 +793,11 @@ async function preloadAudio() {
     const cache = await caches.open('route-audio-v1');
     const allPaths = ALL_AUDIO_COMMANDS.map(cmd => getAudioPath(cmd)).filter(p => p);
     const uniquePaths = [...new Set(allPaths)];
-    let loaded = 0;
-    let failed = 0;
     for (const path of uniquePaths) {
         try {
             const res = await fetch(path);
             if (res.ok) await cache.put(path, res);
-            else failed++;
-        } catch (e) {
-            failed++;
-        }
-        loaded++;
+        } catch (e) {}
     }
 }
 
@@ -1112,43 +834,33 @@ function loadRouteFromJSON(data) {
 }
 
 function processRouteData(data, name) {
-    // Очищаем предыдущий маршрут
     clearRoute();
-    
     startWakeLock();
 
-    if (!data || !Array.isArray(data)) {
-        throw new Error('Неверный формат данных: ожидается массив');
-    }
-    if (data.length === 0) {
-        throw new Error('Маршрут пуст');
-    }
+    if (!data || !Array.isArray(data)) throw new Error('Неверный формат данных: ожидается массив');
+    if (data.length === 0) throw new Error('Маршрут пуст');
 
     APP.navPoints = data.map((d, i) => {
         const pts = d.pts || [];
         if (!pts || pts.length === 0) {
-            console.warn('Точка ' + i + ' без координат, пропускаем');
+            console.warn('Точка ' + i + ' без координат');
             return null;
         }
-        // Конвертируем из [lat, lon] в [lng, lat] для API v3
         const ptsConverted = pts.map(p => [p[1], p[0]]);
         return {
             id: d.id || (i + 1),
-            lat: pts[0]?.[0],
-            lon: pts[0]?.[1],
-            latLng: [ptsConverted[0][0], ptsConverted[0][1]], // [lng, lat] для API v3
+            lat: pts[0]?.[0], lon: pts[0]?.[1],
+            latLng: [ptsConverted[0][0], ptsConverted[0][1]],
             color: d.color,
             hex: COLORS[d.color]?.hex || '#007AFF',
             cmd: (d.cmd || d.comm || `Т${i + 1}`).trim(),
             comm: d.comm || '',
-            pts: ptsConverted, // Конвертированные координаты
+            pts: ptsConverted,
             az: pts.length >= 2 ? calcAzimuth(pts[0], pts[1]) : 0
         };
     }).filter(p => p !== null);
 
-    if (APP.navPoints.length === 0) {
-        throw new Error('Нет валидных точек в маршруте');
-    }
+    if (APP.navPoints.length === 0) throw new Error('Нет валидных точек');
 
     APP.navCurrentIndex = 0;
     APP.navPreviewIndex = -1;
@@ -1163,28 +875,17 @@ function processRouteData(data, name) {
 
     if (APP.navPoints.length > 0 && APP.map) {
         setTimeout(() => {
-            let minLat = Infinity, maxLat = -Infinity;
-            let minLng = Infinity, maxLng = -Infinity;
-
+            let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
             APP.navPoints.forEach(p => {
-                if (p.pts && p.pts.length > 0) {
-                    const lat = p.pts[0][1]; // [lng, lat] -> lat = index 1
-                    const lng = p.pts[0][0]; // [lng, lat] -> lng = index 0
-                    if (lat < minLat) minLat = lat;
-                    if (lat > maxLat) maxLat = lat;
-                    if (lng < minLng) minLng = lng;
-                    if (lng > maxLng) maxLng = lng;
+                if (p.pts?.length > 0) {
+                    const [lng, lat] = p.pts[0];
+                    minLat = Math.min(minLat, lat); maxLat = Math.max(minLat, maxLat);
+                    minLng = Math.min(minLng, lng); maxLng = Math.max(minLng, maxLng);
                 }
             });
-
             if (minLat !== Infinity) {
-                const centerLat = (minLat + maxLat) / 2;
-                const centerLng = (minLng + maxLng) / 2;
                 APP.map.update({
-                    location: {
-                        center: [centerLng, centerLat], // [lng, lat]
-                        zoom: 14
-                    }
+                    location: { center: [(minLng + maxLng) / 2, (minLat + maxLat) / 2], zoom: 14 }
                 });
             }
         }, 100);
@@ -1193,42 +894,31 @@ function processRouteData(data, name) {
 
     let routeName = name;
     const searchParam = new URLSearchParams(window.location.search).get('m');
-    if (searchParam) {
-        routeName = searchParam;
-    } else {
+    if (searchParam) routeName = searchParam;
+    else {
         const hash = window.location.hash.slice(1);
         if (hash) {
-            const hashParams = new URLSearchParams(hash);
-            const hashParam = hashParams.get('m');
-            if (hashParam) {
-                routeName = hashParam;
-            }
+            const hashParam = new URLSearchParams(hash).get('m');
+            if (hashParam) routeName = hashParam;
         }
     }
 }
 
 // ============================================
-// WAKE LOCK (Видео + Аудио + Canvas)
+// WAKE LOCK
 // ============================================
 let wakeLockInterval = null;
 const wakeVideo = document.getElementById('wakeLockVideo');
-let wakeCanvas = null;
-let wakeCanvasStream = null;
+let wakeCanvas = null, wakeCanvasStream = null;
 
 function initWakeVideo() {
     if (!wakeCanvas) {
         wakeCanvas = document.createElement('canvas');
-        wakeCanvas.width = 1;
-        wakeCanvas.height = 1;
+        wakeCanvas.width = 1; wakeCanvas.height = 1;
         const ctx = wakeCanvas.getContext('2d');
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, 1, 1);
-
-        if (wakeCanvas.captureStream) {
-            wakeCanvasStream = wakeCanvas.captureStream(30);
-        } else if (wakeCanvas.mozCaptureStream) {
-            wakeCanvasStream = wakeCanvas.mozCaptureStream(30);
-        }
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 1, 1);
+        if (wakeCanvas.captureStream) wakeCanvasStream = wakeCanvas.captureStream(30);
+        else if (wakeCanvas.mozCaptureStream) wakeCanvasStream = wakeCanvas.mozCaptureStream(30);
     }
 }
 
@@ -1254,17 +944,11 @@ function startWakeLock() {
         wakeVideo.play().catch(e => console.log('Wake video error:', e));
     }
     const audioCtx = initAudioContext();
-    if ('vibrate' in navigator) {
-        navigator.vibrate(0);
-    }
+    if ('vibrate' in navigator) navigator.vibrate(0);
     if (wakeLockInterval) clearInterval(wakeLockInterval);
     wakeLockInterval = setInterval(() => {
-        if (wakeVideo && wakeVideo.paused) {
-            wakeVideo.play().catch(e => console.log('Wake video restart error:', e));
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (wakeVideo && wakeVideo.paused) wakeVideo.play().catch(e => console.log('Wake video restart error:', e));
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
         if (wakeCanvas) {
             const ctx = wakeCanvas.getContext('2d');
             ctx.fillStyle = '#' + Math.floor(Math.random()*16777215).toString(16);
@@ -1274,117 +958,55 @@ function startWakeLock() {
 }
 
 function stopWakeLock() {
-    if (wakeLockInterval) {
-        clearInterval(wakeLockInterval);
-        wakeLockInterval = null;
-    }
-    if (wakeVideo) {
-        wakeVideo.pause();
-        wakeVideo.srcObject = null;
-    }
+    if (wakeLockInterval) { clearInterval(wakeLockInterval); wakeLockInterval = null; }
+    if (wakeVideo) { wakeVideo.pause(); wakeVideo.srcObject = null; }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(startWakeLock, 500);
-});
+document.addEventListener('DOMContentLoaded', () => setTimeout(startWakeLock, 500));
 
 // ============================================
 // ИНИЦИАЛИЗАЦИЯ
 // ============================================
 async function initMap() {
     await ymaps3.ready;
-
     const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapControls } = ymaps3;
-
-    // Регистрируем CDN для загрузки пакетов
     ymaps3.import.registerCdn('https://cdn.jsdelivr.net/npm/{package}', '@yandex/ymaps3-default-ui-theme@latest');
-
-    const { YMapTiltControl, YMapRotateControl, YMapRotateTiltControl } = await ymaps3.import(
-        '@yandex/ymaps3-default-ui-theme'
-    );
+    const { YMapTiltControl, YMapRotateControl, YMapRotateTiltControl } = await ymaps3.import('@yandex/ymaps3-default-ui-theme');
 
     const behaviors = ['drag', 'scrollZoom', 'dblClick', 'mouseTilt', 'mouseRotate', 'pinchZoom'];
 
     APP.map = new YMap(
         document.getElementById('map'),
-        {
-            location: {
-                center: [43.9332, 56.3399], // [lng, lat]
-                zoom: 17,
-                tilt: 0
-            },
-            behaviors: behaviors
-        },
-        [
-            new YMapDefaultSchemeLayer({}),
-            new YMapDefaultFeaturesLayer({})
-        ]
+        { location: { center: [43.9332, 56.3399], zoom: 17, tilt: 0 }, behaviors },
+        [new YMapDefaultSchemeLayer({}), new YMapDefaultFeaturesLayer({})]
     );
 
-    // Добавляем контролы управления наклоном и поворотом
-    APP.map.addChild(
-        new YMapControls({ position: 'right' }, [
-            new YMapRotateTiltControl({}),
-            new YMapRotateControl({}),
-            new YMapTiltControl({})
-        ])
-    );
+    APP.map.addChild(new YMapControls({ position: 'right' }, [
+        new YMapRotateTiltControl({}), new YMapRotateControl({}), new YMapTiltControl({})
+    ]));
 
-    // Маркер пользователя - создаём DOM-элемент
     const userMarkerEl = document.createElement('div');
-    userMarkerEl.style.width = '40px';
-    userMarkerEl.style.height = '40px';
-    userMarkerEl.style.position = 'relative';
-    // Центрируем маркер: координата указывает на центр элемента
-    userMarkerEl.style.transform = 'translate(-50%, -50%)';
+    userMarkerEl.style.cssText = 'width:40px;height:40px;position:relative;transform:translate(-50%,-50%);cursor:pointer;';
     userMarkerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-        <g id="user-arrow">
-            <path d="M20,4 L32,34 L20,28 L8,34 Z" fill="#FF3B30" stroke="white" stroke-width="2"/>
-        </g>
+        <g id="user-arrow"><path d="M20,4 L32,34 L20,28 L8,34 Z" fill="#FF3B30" stroke="white" stroke-width="2"/></g>
     </svg>`;
-    userMarkerEl.style.cursor = 'pointer';
-    
-    console.log('[Marker] Создаю маркер пользователя, элемент:', userMarkerEl);
-    
-    APP.userMarker = new ymaps3.YMapMarker(
-        {
-            coordinates: [43.9332, 56.3399], // [lng, lat] = [долгота, широта]
-            zIndex: 5000
-        },
-        userMarkerEl
-    );
-    
-    // Сохраняем ссылку на DOM-элемент для обновления
+
+    APP.userMarker = new ymaps3.YMapMarker({ coordinates: [43.9332, 56.3399], zIndex: 5000 }, userMarkerEl);
     APP.userMarkerEl = userMarkerEl;
-    
     APP.map.addChild(APP.userMarker);
-    console.log('[Marker] Маркер добавлен на карту:', APP.userMarker);
 
     initGeolocation();
-
-    // Инициализация модуля авто-ведения
     AutoRouteModule.init($('autoRouteBtn'));
 
-    // Обработчики
     $('listBtn').addEventListener('click', togglePointsList);
     $('locateBtn').addEventListener('click', toggleAutoCenter);
-    $('closeCommentBtn').addEventListener('click', e => {
-        e.stopPropagation();
-        $('commentBlock').classList.remove('visible');
-    });
+    $('closeCommentBtn').addEventListener('click', e => { e.stopPropagation(); $('commentBlock').classList.remove('visible'); });
 
-    // Клик по карте - закрываем превью и список точек
     document.getElementById('map').addEventListener('click', (e) => {
-        // Проверяем, что клик не по контролам
-        if (!e.target.closest('.ymaps3-controls')) {
-            closePreview();
-            $('pointsList').style.display = 'none';
-        }
+        if (!e.target.closest('.ymaps3-controls')) { closePreview(); $('pointsList').style.display = 'none'; }
     });
 
-    // Инициализация модуля меню
     MenuModule.init(loadRouteFromJSON);
-
     $('loading').classList.add('hidden');
 }
 
