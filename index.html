@@ -862,11 +862,10 @@ function showPreview(i) {
     if (p.pts && p.pts.length >= 2) {
         const firstPt = p.pts[0];
 
-        // Сначала быстро перемещаемся к началу сегмента
+        // Сначала быстро перемещаемся к началу сегмента (зум не меняем)
         APP.map.update({
             location: {
-                center: [firstPt[0], firstPt[1]],
-                zoom: 16
+                center: [firstPt[0], firstPt[1]]
             },
             duration: 500
         });
