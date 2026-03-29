@@ -56,13 +56,20 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         this.currentIndex=0;this.isTransition=false;
         hideAutoIndicator();
     },
-    animateAlongPath(pts,speed=25,onComplete=null){
+    animateAlongPath(pts,speed=25,onComplete=null,minDuration=3000){
         if(!window.isAutoRouteRunning&&!onComplete)return;
         if(!pts||pts.length<2){if(onComplete)onComplete();return;}
         const validPts=pts.filter(p=>p&&p.length===2&&typeof p[0]==='number'&&typeof p[1]==='number'&&isFinite(p[0])&&isFinite(p[1]));
         if(validPts.length<2){if(onComplete)onComplete();return;}
         try{
-            const ls=createLineString(validPts),routeLength=getLineLength(ls),duration=(routeLength/speed)*1000,startTime=performance.now();let animationId=null;
+            const ls=createLineString(validPts),routeLength=getLineLength(ls);
+            // Если minDuration=0 - не ограничиваем минимальное время
+            let duration=(routeLength/speed)*1000;
+            if(minDuration>0){
+                const actualSpeed=routeLength<(speed*minDuration/1000)?(routeLength/(minDuration/1000)):speed;
+                duration=(routeLength/actualSpeed)*1000;
+            }
+            const startTime=performance.now();let animationId=null;
             const animateStep=(currentTime)=>{
                 if(!window.isAutoRouteRunning){cancelAnimationFrame(animationId);return;}
                 const elapsed=currentTime-startTime,t=Math.min(elapsed/duration,1),currentDistance=t*routeLength;
@@ -113,8 +120,8 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                     if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
                     // Воспроизводим команду и начинаем основной сегмент
                     if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
-                    this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();});
-                });
+                    this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();},3000);
+                },0);
                 return;
             }
         }
@@ -127,6 +134,6 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
             if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
             this.currentIndex++;
             this.playSegment();
-        });
+        },3000);
     }
 };
