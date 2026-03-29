@@ -789,7 +789,8 @@ function updateHudDist(d, ad) {
 }
 
 // Анимация камеры вдоль пути сегмента маршрута с использованием Turf.js
-function animateAlongPath(pts, duration = 2000) {
+// durationPerMeter - время на прохождение 1 метра в мс (по умолчанию 5 мс/м = 200 м/сек)
+function animateAlongPath(pts, durationPerMeter = 5) {
     if (!pts || pts.length < 2) return;
 
     // Проверяем валидность координат
@@ -805,17 +806,24 @@ function animateAlongPath(pts, duration = 2000) {
         const lineString = turf.lineString(validPts.map(p => [p[0], p[1]]));
         const routeLength = turf.length(lineString, {units: 'meters'});
         
+        // Рассчитываем длительность анимации на основе длины пути
+        const minDuration = 1000; // Минимум 1 секунда
+        const maxDuration = 5000; // Максимум 5 секунд
+        const duration = Math.max(minDuration, Math.min(maxDuration, routeLength * durationPerMeter));
+        
+        console.log('[animateAlongPath] Длина:', routeLength.toFixed(1), 'м, Время:', duration.toFixed(0), 'мс');
+
         const startTime = performance.now();
 
         function animateStep(currentTime) {
             const elapsed = currentTime - startTime;
-            
+
             // Защита от отрицательного времени
             if (elapsed < 0) {
                 requestAnimationFrame(animateStep);
                 return;
             }
-            
+
             const t = Math.min(elapsed / duration, 1);
 
             // Текущая дистанция вдоль маршрута
@@ -824,9 +832,9 @@ function animateAlongPath(pts, duration = 2000) {
             try {
                 // Получаем координаты на текущей дистанции
                 const currentPoint = turf.along(lineString, currentDistance, {units: 'meters'});
-                
-                if (currentPoint && currentPoint.geometry && 
-                    currentPoint.geometry.coordinates && 
+
+                if (currentPoint && currentPoint.geometry &&
+                    currentPoint.geometry.coordinates &&
                     currentPoint.geometry.coordinates.length === 2) {
                     const coordinates = currentPoint.geometry.coordinates;
 
@@ -870,9 +878,9 @@ function showPreview(i) {
             duration: 500
         });
 
-        // Затем плавно движемся вдоль пути сегмента
+        // Затем плавно движемся вдоль пути сегмента (время рассчитывается автоматически)
         setTimeout(() => {
-            animateAlongPath(p.pts, 2000);
+            animateAlongPath(p.pts);
         }, 500);
     } else if (p.pts && p.pts.length > 0) {
         APP.map.update({
