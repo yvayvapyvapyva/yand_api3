@@ -762,8 +762,8 @@ function updateHud() {
     const prevBtn = $('prevBtn'), nextBtn = $('nextBtn');
     prevBtn.disabled = (idx <= 0);
     nextBtn.disabled = (idx >= APP.navPoints.length - 1);
-    prevBtn.onclick = () => idx > 0 && showPreview(idx - 1);
-    nextBtn.onclick = () => idx < APP.navPoints.length - 1 && showPreview(idx + 1);
+    prevBtn.onclick = () => idx > 0 && showPreviewWithAnimation(idx - 1);
+    nextBtn.onclick = () => idx < APP.navPoints.length - 1 && showPreviewWithAnimation(idx + 1);
 
     const hasComm = t.comm && t.comm.trim() !== '';
     $('commentText').textContent = t.comm;
@@ -894,7 +894,39 @@ function animateAlongPath(pts, durationPerMeter = 6) {
     }
 }
 
+// Мгновенный переход к точке (для списка точек и клика по маркеру)
 function showPreview(i) {
+    const p = APP.navPoints[i];
+    if (!p) return;
+    
+    $('pointsList').style.display = 'none';
+    APP.navPreviewIndex = i;
+    updateHud();
+    renderRoutePoints();
+    
+    if (p.pts && p.pts.length >= 2) {
+        const firstPt = p.pts[0];
+
+        // Мгновенно перемещаемся к началу сегмента
+        APP.map.update({
+            location: {
+                center: [firstPt[0], firstPt[1]]
+            }
+        });
+
+        // Затем плавно движемся вдоль пути сегмента
+        animateAlongPath(p.pts);
+    } else if (p.pts && p.pts.length > 0) {
+        APP.map.update({
+            location: {
+                center: p.pts[0]
+            }
+        });
+    }
+}
+
+// Плавный переход к точке (для стрелок вперёд/назад)
+function showPreviewWithAnimation(i) {
     const p = APP.navPoints[i];
     if (!p) return;
     
