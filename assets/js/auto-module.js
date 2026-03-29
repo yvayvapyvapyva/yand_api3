@@ -37,23 +37,33 @@ function hideAutoIndicator(){
     }
 }
 
-const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:null,isTransition:false,
+const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:null,isTransition:false,isFirstStart:false,
     init(btn){this.btn=btn;this.btn.addEventListener('click',()=>this.toggle());},
     toggle(){this.isRunning?this.stop():this.start(25);},
     start(speed=25){
         console.log('[AutoRoute] start');const appRef=APP||window.APP;
         if(!appRef?.navPoints||appRef.navPoints.length===0){if(typeof showToast==='function')showToast('Маршрут не загружен','error');return;}
-        this.isRunning=true;window.isAutoRouteRunning=true;this.speed=speed;this.currentIndex=0;this.isTransition=false;
+        this.isRunning=true;window.isAutoRouteRunning=true;this.speed=speed;
+        // Начинаем с текущей активной точки или точки просмотра
+        this.currentIndex=appRef.navPreviewIndex>=0?appRef.navPreviewIndex:appRef.navCurrentIndex;
+        this.isTransition=false;
+        // Флаг первого запуска - не создавать переход от предыдущей точки
+        this.isFirstStart=true;
         if(this.btn){this.btn.classList.add('active');this.btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';}
-        // Показываем индикатор на первой точке маршрута
-        if(appRef.navPoints[0]?.pts?.length>0)updateAutoIndicator(appRef.navPoints[0].pts[0]);
+        // Показываем индикатор на ПЕРВОЙ ТОЧКЕ ПУТИ выбранной метки
+        const currentPoint=appRef.navPoints[this.currentIndex];
+        if(currentPoint?.pts?.length>0){
+            updateAutoIndicator(currentPoint.pts[0]);
+            // Перемещаем камеру к первой точке пути
+            APP.map.update({location:{center:currentPoint.pts[0]}});
+        }
         this.playSegment();
     },
     stop(){
         this.isRunning=false;window.isAutoRouteRunning=false;
         if(this.timeout){clearTimeout(this.timeout);this.timeout=null;}
         if(this.btn){this.btn.classList.remove('active');this.btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';}
-        this.currentIndex=0;this.isTransition=false;
+        this.currentIndex=0;this.isTransition=false;this.isFirstStart=false;
         hideAutoIndicator();
     },
     animateAlongPath(pts,speed=25,onComplete=null,minDuration=3500){
@@ -63,7 +73,6 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         if(validPts.length<2){if(onComplete)onComplete();return;}
         try{
             const ls=createLineString(validPts),routeLength=getLineLength(ls);
-            // Если minDuration=0 - не ограничиваем минимальное время
             let duration=(routeLength/speed)*1000;
             if(minDuration>0){
                 const actualSpeed=routeLength<(speed*minDuration/1000)?(routeLength/(minDuration/1000)):speed;
@@ -100,8 +109,8 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         const p=appRef.navPoints[this.currentIndex];
         if(!p||!p.pts||p.pts.length<2){this.currentIndex++;this.playSegment();return;}
         const firstPoint=p.pts[0];
-        // Если это не первый сегмент и есть предыдущий - создаём плавный переход
-        if(this.currentIndex>0&&!this.isTransition){
+        // Если это не первый сегмент и есть предыдущий - создаём плавный переход (но не при первом запуске!)
+        if(this.currentIndex>0&&!this.isTransition&&!this.isFirstStart){
             const prevPoint=appRef.navPoints[this.currentIndex-1].pts[appRef.navPoints[this.currentIndex-1].pts.length-1];
             const currentStart=p.pts[0];
             const gap=_calcDistance(prevPoint,currentStart);
@@ -125,6 +134,8 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                 return;
             }
         }
+        // Сбрасываем флаг после первого запуска
+        this.isFirstStart=false;
         appRef.navCurrentIndex=this.currentIndex;appRef.navPreviewIndex=-1;
         if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
         // Индикатор достиг НАЧАЛА пути (первой точки) - воспроизводим команду
