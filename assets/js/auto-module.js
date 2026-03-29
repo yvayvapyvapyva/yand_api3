@@ -56,7 +56,7 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         this.currentIndex=0;this.isTransition=false;
         hideAutoIndicator();
     },
-    animateAlongPath(pts,speed=25,onComplete=null,minDuration=3000){
+    animateAlongPath(pts,speed=25,onComplete=null,minDuration=3500){
         if(!window.isAutoRouteRunning&&!onComplete)return;
         if(!pts||pts.length<2){if(onComplete)onComplete();return;}
         const validPts=pts.filter(p=>p&&p.length===2&&typeof p[0]==='number'&&typeof p[1]==='number'&&isFinite(p[0])&&isFinite(p[1]));
@@ -99,7 +99,7 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         if(this.currentIndex>=appRef.navPoints.length){this.stop();if(typeof showToast==='function')showToast('Маршрут завершён!','success');return;}
         const p=appRef.navPoints[this.currentIndex];
         if(!p||!p.pts||p.pts.length<2){this.currentIndex++;this.playSegment();return;}
-        
+        const firstPoint=p.pts[0];
         // Если это не первый сегмент и есть предыдущий - создаём плавный переход
         if(this.currentIndex>0&&!this.isTransition){
             const prevPoint=appRef.navPoints[this.currentIndex-1].pts[appRef.navPoints[this.currentIndex-1].pts.length-1];
@@ -118,22 +118,21 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                     this.isTransition=false;
                     appRef.navCurrentIndex=this.currentIndex;appRef.navPreviewIndex=-1;
                     if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
-                    // Воспроизводим команду и начинаем основной сегмент
+                    // Индикатор достиг НАЧАЛА пути (первой точки) - воспроизводим команду
                     if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
-                    this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();},3000);
+                    this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();},3500);
                 },0);
                 return;
             }
         }
-        
         appRef.navCurrentIndex=this.currentIndex;appRef.navPreviewIndex=-1;
         if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
-        // Воспроизводим команду по завершении анимации сегмента (когда достигнута следующая точка)
+        // Индикатор достиг НАЧАЛА пути (первой точки) - воспроизводим команду
+        if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
         this.animateAlongPath(p.pts,this.speed,()=>{
             if(!this.isRunning)return;
-            if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
             this.currentIndex++;
             this.playSegment();
-        },3000);
+        },3500);
     }
 };
