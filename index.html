@@ -165,7 +165,7 @@ function getNavIconSvg(col,txt,az,isEnd,isCurr=false,hasComm=false,isPrev=false)
     const strk=isCurr?'#0F0':(isPrev?'#888':'#000');
     const textColor=hasComm?'#B03050':'#000';
     const opacity=isPrev?'0.5':'1';
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" opacity="${opacity}"><g transform="rotate(${az},${c},${c})"><polygon points="${c},2 ${c+10},${s-5} ${c},${s-14} ${c-10},${s-5}" fill="${col}" stroke="${strk}" stroke-width="1.5"/></g><circle cx="${c}" cy="${c}" r="${isEnd?7:9}" fill="${col}" stroke="${strk}" stroke-width="1.5"/><text x="${c}" y="${c+0.5}" font-size="${isEnd?8:9}" font-family="Arial" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="${textColor}" stroke="white" stroke-width="2" style="paint-order:stroke fill">${txt}</text></svg>`;
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" opacity="${opacity}"><circle cx="${c}" cy="${c}" r="${isEnd?7:9}" fill="${col}" stroke="${strk}" stroke-width="1.5"/><text x="${c}" y="${c+0.5}" font-size="${isEnd?8:9}" font-family="Arial" font-weight="900" text-anchor="middle" dominant-baseline="middle" fill="${textColor}" stroke="white" stroke-width="2" style="paint-order:stroke fill">${txt}</text></svg>`;
     return'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
 }
 
