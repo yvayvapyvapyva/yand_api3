@@ -129,8 +129,8 @@ function updateUserMarkerRotation(){
     if(arrowEl){
         // Получаем азимут карты в градусах
         const mapAz=(APP.map.azimuth||0)*(180/Math.PI);
-        // Поворот = азимут карты - азимут движения (компенсация поворота карты)
-        const rotation=mapAz-APP.lastAz;
+        // Поворот = азимут движения - азимут карты (компенсация поворота карты)
+        const rotation=APP.lastAz-mapAz;
         arrowEl.setAttribute('transform',`rotate(${rotation},20,20)`);
     }
 }
