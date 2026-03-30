@@ -10,7 +10,7 @@ function getLineLength(ls){const c=ls.geometry.coordinates;let t=0;for(let i=0;i
 function getPointAlongLine(ls,dist){const c=ls.geometry.coordinates;let traveled=0;for(let i=0;i<c.length-1;i++){const p1=c[i],p2=c[i+1],segDist=_calcDistance(p1,p2);if(traveled+segDist>=dist){const r=(dist-traveled)/segDist;return{geometry:{coordinates:[p1[0]+(p2[0]-p1[0])*r,p1[1]+(p2[1]-p1[1])*r]}};}traveled+=segDist;}return{geometry:{coordinates:c[c.length-1]}};}
 
 // Индикатор авто-ведения (стрелка)
-let autoIndicatorMarker=null,autoIndicatorVisible=false,prevCoords=null,autoIndicatorEl=null,currentRotation=0;
+let autoIndicatorMarker=null,autoIndicatorVisible=false,prevCoords=null,autoIndicatorEl=null,mapAzimuth=0;
 
 // Вычисление угла между двумя точками (как в примере Yandex Progress)
 function angleFromCoordinate(p1,p2){
@@ -24,6 +24,14 @@ function angleFromCoordinate(p1,p2){
     return(deg+360)%360;
 }
 
+// Плавный поворот угла (кратчайший путь)
+function smoothRotate(currentAngle,targetAngle){
+    let diff=targetAngle-(currentAngle%360);
+    if(diff>180)diff-=360;
+    if(diff<-180)diff+=360;
+    return currentAngle+diff;
+}
+
 // Создание и обновление индикатора-стрелки
 function updateAutoIndicator(coords){
     if(!APP.map||!coords)return;
@@ -31,48 +39,31 @@ function updateAutoIndicator(coords){
         // Создаём контейнер
         const markerElement=document.createElement('div');
         markerElement.style.cssText='position:absolute;transform:translate(-50%,-50%);';
-        
-        // Создаём стрелку (PNG изображение)
+
+        // Создаём стрелку (PNG изображение) с начальным поворотом
+        // Поворачиваем стрелку так, чтобы она смотрела вверх экрана
         const markerElementImg=document.createElement('img');
         markerElementImg.id='marker';
         markerElementImg.src='assets/images/marker-red.png';
-        markerElementImg.style.cssText='width:40px;height:40px;display:block;transition:transform 0.1s linear;';
+        // Начальный поворот: стрелка должна смотреть вверх (инвертируем текущий азимут карты)
+        const initialRotation=-(APP.map.azimuth||0)*(180/Math.PI);
+        markerElementImg.style.cssText=`width:40px;height:40px;display:block;transform:rotate(${initialRotation}deg);`;
         markerElement.appendChild(markerElementImg);
-        
-        // Сохраняем ссылку на элемент для доступа к вращению
+
+        // Сохраняем ссылку на элемент
         autoIndicatorEl=markerElementImg;
-        
+
         // Создаём маркер
         autoIndicatorMarker=new ymaps3.YMapMarker({coordinates:coords,zIndex:10000},markerElement);
         APP.map.addChild(autoIndicatorMarker);
         autoIndicatorVisible=true;
         prevCoords=coords;
-        currentRotation=0;
         console.log('[Indicator] Создан');
         return;
     }
     if(!autoIndicatorVisible){APP.map.addChild(autoIndicatorMarker);autoIndicatorVisible=true;console.log('[Indicator] Добавлен');}
-    
-    // Вычисляем угол поворота с кратчайшим путём
-    if(prevCoords&&!(prevCoords[0]===coords[0]&&prevCoords[1]===coords[1])&&autoIndicatorEl){
-        const targetAngle=angleFromCoordinate(prevCoords,coords);
-        
-        // Вычисляем минимальную разницу углов
-        let angleDiff=targetAngle-(currentRotation%360);
-        
-        // Нормализуем разницу (-180° до +180°)
-        if(angleDiff>180)angleDiff-=360;
-        if(angleDiff<-180)angleDiff+=360;
-        
-        // Обновляем текущее вращение
-        currentRotation+=angleDiff;
-        
-        // Применяем вращение
-        autoIndicatorEl.style.transform=`rotate(${currentRotation}deg)`;
-    }
-    prevCoords=coords;
-    
-    // Обновляем координаты
+
+    // Просто обновляем координаты - вращение остаётся неизменным!
     autoIndicatorMarker.update({coordinates:coords});
 }
 
@@ -127,63 +118,94 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                 segLengths.push(len);
                 totalLength+=len;
             }
+            
+            // Проверка: есть ли путь для анимации
+            if(totalLength===0||segLengths.length===0){
+                console.log('[AutoRoute] Нет пути для анимации');
+                if(onComplete)onComplete();
+                return;
+            }
+            
             // Расчёт общей длительности
             let totalDuration=(totalLength/speed)*1000;
             if(minDuration>0&&totalDuration<minDuration){
                 totalDuration=minDuration;
             }
             
+            // Инициализируем mapAzimuth текущим азимутом карты (в градусах)
+            mapAzimuth=(APP.map.azimuth||0)*(180/Math.PI);
+            
             // Анимация: 1 вызов update() на отрезок + индикатор на 60 FPS
             const startTime=performance.now();
             let animationId=null;
-            
+
             const animateStep=(currentTime)=>{
                 if(!window.isAutoRouteRunning){cancelAnimationFrame(animationId);return;}
                 const elapsed=currentTime-startTime;
                 const progress=Math.min(elapsed/totalDuration,1);
                 const currentDistance=progress*totalLength;
-                
+
                 // Интерполяция позиции для индикатора
                 const currentPoint=getPointAlongLine(createLineString(validPts),currentDistance);
                 if(currentPoint?.geometry?.coordinates?.length===2){
                     updateAutoIndicator(currentPoint.geometry.coordinates);
                 }
-                
+
                 if(progress<1){
                     animationId=requestAnimationFrame(animateStep);
                 }
             };
-            
+
             // Запускаем анимацию индикатора
             animationId=requestAnimationFrame(animateStep);
             
-            // Перемещаем карту по отрезкам (1 вызов на отрезок)
+            // Перемещаем карту по отрезкам (1 вызов на отрезок) + поворот при смене направления
             let currentSegIndex=0;
-            let elapsedSeg=0;
-            
+
             const animateSegment=()=>{
+                console.log('[AutoRoute] animateSegment:', currentSegIndex, 'из', validPts.length-1);
+                
                 if(!window.isAutoRouteRunning||currentSegIndex>=validPts.length-1){
+                    console.log('[AutoRoute] Завершение маршрута');
                     cancelAnimationFrame(animationId);
                     if(onComplete)onComplete();
                     return;
                 }
-                
+
+                const p1=validPts[currentSegIndex];
                 const p2=validPts[currentSegIndex+1];
                 const segDuration=(segLengths[currentSegIndex]/totalLength)*totalDuration;
+
+                // Вычисляем угол направления этого сегмента
+                const segAngle=angleFromCoordinate(p1,p2);
+
+                // ИНВЕРТИРУЕМ угол для камеры: чтобы машинка ехала вверх экрана
+                let targetAzimuth=-segAngle;
                 
-                // Перемещаем карту с анимацией
+                // Поворачиваем карту через кратчайший путь
+                mapAzimuth=smoothRotate(mapAzimuth,targetAzimuth);
+                
+                // Нормализуем mapAzimuth (-360° до +360°) для предотвращения переполнения
+                while(mapAzimuth>360)mapAzimuth-=360;
+                while(mapAzimuth<-360)mapAzimuth+=360;
+
+                // Перемещаем карту с анимацией + поворот
                 APP.map.update({
                     location:{
                         center:p2,
                         duration:segDuration,
                         easing:'linear'
+                    },
+                    camera:{
+                        azimuth:mapAzimuth*(Math.PI/180),  // Поворот карты по направлению
+                        duration:segDuration  // Синхронно с перемещением
                     }
                 });
-                
+
                 currentSegIndex++;
                 setTimeout(animateSegment,segDuration);
             };
-            
+
             animateSegment();
         }catch(e){
             if(onComplete)onComplete();
