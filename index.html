@@ -129,8 +129,8 @@ function updateUserMarkerRotation(){
     if(arrowEl){
         // Получаем азимут карты в градусах
         const mapAz=(APP.map.azimuth||0)*(180/Math.PI);
-        // Целевой угол = азимут движения - азимут карты
-        let targetRotation=APP.lastAz-mapAz;
+        // Целевой угол = азимут движения + азимут карты
+        let targetRotation=APP.lastAz+mapAz;
         // Нормализуем дельту по кратчайшему пути (-180...180)
         let delta=((targetRotation-APP.markerRotation+180)%360)-180;
         APP.markerRotation+=delta;
