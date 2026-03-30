@@ -82,22 +82,20 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         console.log('[AutoRoute] start');const appRef=APP||window.APP;
         if(!appRef?.navPoints||appRef.navPoints.length===0){if(typeof showToast==='function')showToast('Маршрут не загружен','error');return;}
         this.isRunning=true;window.isAutoRouteRunning=true;this.speed=speed;
-        // Начинаем с текущей активной точки или точки просмотра
         this.currentIndex=appRef.navPreviewIndex>=0?appRef.navPreviewIndex:appRef.navCurrentIndex;
         this.isTransition=false;
-        // Флаг первого запуска - не создавать переход от предыдущей точки
         this.isFirstStart=true;
-        // Устанавливаем наклон карты 50°
+        // Устанавливаем наклон карты 50° (3D режим)
         mapAzimuth=(APP.map.azimuth||0)*(180/Math.PI);
+        const modeIndicator=$('modeIndicator');
+        if(modeIndicator)modeIndicator.textContent='3D';
         if(APP.map){
             APP.map.update({camera:{tilt:50*(Math.PI/180),duration:500}});
         }
         if(this.btn){this.btn.classList.add('active');this.btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';}
-        // Показываем индикатор на ПЕРВОЙ ТОЧКЕ ПУТИ выбранной метки
         const currentPoint=appRef.navPoints[this.currentIndex];
         if(currentPoint?.pts?.length>0){
             updateAutoIndicator(currentPoint.pts[0]);
-            // Перемещаем камеру к первой точке пути
             APP.map.update({location:{center:currentPoint.pts[0]}});
         }
         this.playSegment();
@@ -107,7 +105,9 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         if(this.timeout){clearTimeout(this.timeout);this.timeout=null;}
         if(this.btn){this.btn.classList.remove('active');this.btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';}
         this.currentIndex=0;this.isTransition=false;this.isFirstStart=false;
-        // Сбрасываем наклон карты на 0°
+        // Сбрасываем наклон карты на 0° (2D режим)
+        const modeIndicator=$('modeIndicator');
+        if(modeIndicator)modeIndicator.textContent='2D';
         if(APP.map){
             APP.map.update({camera:{tilt:0*(Math.PI/180),duration:500}});
         }
