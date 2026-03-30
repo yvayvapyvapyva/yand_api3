@@ -72,48 +72,75 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         const validPts=pts.filter(p=>p&&p.length===2&&typeof p[0]==='number'&&typeof p[1]==='number'&&isFinite(p[0])&&isFinite(p[1]));
         if(validPts.length<2){if(onComplete)onComplete();return;}
         try{
-            const ls=createLineString(validPts),routeLength=getLineLength(ls);
-            let duration=(routeLength/speed)*1000;
-            if(minDuration>0){
-                const actualSpeed=routeLength<(speed*minDuration/1000)?(routeLength/(minDuration/1000)):speed;
-                duration=(routeLength/actualSpeed)*1000;
-            }
-            // ПРЕДВАРИТЕЛЬНЫЙ РАСЧЁТ: кэшируем длины сегментов
-            const segmentLengths=[];
-            const cumulativeLengths=[0];
-            let totalLen=0;
+            // ПРЕДВАРИТЕЛЬНЫЙ РАСЧЁТ: длины отрезков и общая длина
+            const segLengths=[];
+            let totalLength=0;
             for(let i=0;i<validPts.length-1;i++){
                 const len=_calcDistance(validPts[i],validPts[i+1]);
-                segmentLengths.push(len);
-                totalLen+=len;
-                cumulativeLengths.push(totalLen);
+                segLengths.push(len);
+                totalLength+=len;
             }
-            const startTime=performance.now();let animationId=null;
-            let currentSegmentIndex=0;
+            // Расчёт общей длительности
+            let totalDuration=(totalLength/speed)*1000;
+            if(minDuration>0&&totalDuration<minDuration){
+                totalDuration=minDuration;
+            }
+            
+            // Анимация: 1 вызов update() на отрезок + индикатор на 60 FPS
+            const startTime=performance.now();
+            let animationId=null;
+            
             const animateStep=(currentTime)=>{
                 if(!window.isAutoRouteRunning){cancelAnimationFrame(animationId);return;}
-                const elapsed=currentTime-startTime,t=Math.min(elapsed/duration,1),currentDistance=t*routeLength;
-                try{
-                    // ОПТИМИЗАЦИЯ: ищем сегмент начиная с текущего (не с начала!)
-                    while(currentSegmentIndex<cumulativeLengths.length-1&&
-                          currentDistance>cumulativeLengths[currentSegmentIndex+1]){
-                        currentSegmentIndex++;
-                    }
-                    // Интерполируем точку внутри сегмента
-                    const segStart=cumulativeLengths[currentSegmentIndex];
-                    const segEnd=cumulativeLengths[currentSegmentIndex+1];
-                    const segLen=segEnd-segStart;
-                    const segT=segLen>0?(currentDistance-segStart)/segLen:0;
-                    const p1=validPts[currentSegmentIndex];
-                    const p2=validPts[currentSegmentIndex+1];
-                    const coords=[p1[0]+(p2[0]-p1[0])*segT,p1[1]+(p2[1]-p1[1])*segT];
-                    APP.map.update({location:{center:coords}});
-                    updateAutoIndicator(coords);
-                }catch(e){}
-                if(t<1){animationId=requestAnimationFrame(animateStep);}else{if(onComplete)onComplete();}
+                const elapsed=currentTime-startTime;
+                const progress=Math.min(elapsed/totalDuration,1);
+                const currentDistance=progress*totalLength;
+                
+                // Интерполяция позиции для индикатора
+                const currentPoint=getPointAlongLine(createLineString(validPts),currentDistance);
+                if(currentPoint?.geometry?.coordinates?.length===2){
+                    updateAutoIndicator(currentPoint.geometry.coordinates);
+                }
+                
+                if(progress<1){
+                    animationId=requestAnimationFrame(animateStep);
+                }
             };
+            
+            // Запускаем анимацию индикатора
             animationId=requestAnimationFrame(animateStep);
-        }catch(e){if(onComplete)onComplete();}
+            
+            // Перемещаем карту по отрезкам (1 вызов на отрезок)
+            let currentSegIndex=0;
+            let elapsedSeg=0;
+            
+            const animateSegment=()=>{
+                if(!window.isAutoRouteRunning||currentSegIndex>=validPts.length-1){
+                    cancelAnimationFrame(animationId);
+                    if(onComplete)onComplete();
+                    return;
+                }
+                
+                const p2=validPts[currentSegIndex+1];
+                const segDuration=(segLengths[currentSegIndex]/totalLength)*totalDuration;
+                
+                // Перемещаем карту с анимацией
+                APP.map.update({
+                    location:{
+                        center:p2,
+                        duration:segDuration,
+                        easing:'linear'
+                    }
+                });
+                
+                currentSegIndex++;
+                setTimeout(animateSegment,segDuration);
+            };
+            
+            animateSegment();
+        }catch(e){
+            if(onComplete)onComplete();
+        }
     },
     createTransitionSegment(fromIdx,toIdx){
         const appRef=APP||window.APP;
