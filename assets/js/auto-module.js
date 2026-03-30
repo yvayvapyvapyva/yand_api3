@@ -113,7 +113,7 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         }
         hideAutoIndicator();
     },
-    animateAlongPath(pts,speed=25,onComplete=null,minDuration=3500){
+    animateAlongPath(pts,speed=25,onComplete=null,minDuration=3500,applySlowStart=true){
         if(!window.isAutoRouteRunning&&!onComplete)return;
         if(!pts||pts.length<2){if(onComplete)onComplete();return;}
         const validPts=pts.filter(p=>p&&p.length===2&&typeof p[0]==='number'&&typeof p[1]==='number'&&isFinite(p[0])&&isFinite(p[1]));
@@ -127,23 +127,41 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                 segLengths.push(len);
                 totalLength+=len;
             }
-            
+
             // Проверка: есть ли путь для анимации
             if(totalLength===0||segLengths.length===0){
                 console.log('[AutoRoute] Нет пути для анимации');
                 if(onComplete)onComplete();
                 return;
             }
-            
-            // Расчёт общей длительности
-            let totalDuration=(totalLength/speed)*1000;
+
+            // Расчёт длительности: applySlowStart определяет, применять ли замедление
+            const slowSpeed=6.94;  // 25 км/ч
+            const fastSpeed=speed;  // 90 км/ч (25 м/с)
+            const slowDuration=applySlowStart?3000:0;  // 3 секунды на низкой скорости только если applySlowStart=true
+            const slowDistance=applySlowStart?slowSpeed*3:0;  // расстояние за 3 секунды (~21 метр)
+
+            let totalDuration;
+            if(applySlowStart&&totalLength<=slowDistance){
+                // Весь сегмент проезжаем на низкой скорости
+                totalDuration=(totalLength/slowSpeed)*1000;
+            }else if(applySlowStart){
+                // 3 секунды на низкой + остаток на высокой
+                const fastDistance=totalLength-slowDistance;
+                const fastDuration=(fastDistance/fastSpeed)*1000;
+                totalDuration=slowDuration+fastDuration;
+            }else{
+                // Вся дорога на высокой скорости
+                totalDuration=(totalLength/fastSpeed)*1000;
+            }
+
             if(minDuration>0&&totalDuration<minDuration){
                 totalDuration=minDuration;
             }
             
             // Инициализируем mapAzimuth текущим азимутом карты (в градусах)
             mapAzimuth=(APP.map.azimuth||0)*(180/Math.PI);
-            
+
             // Анимация: 1 вызов update() на отрезок + индикатор на 60 FPS
             const startTime=performance.now();
             let animationId=null;
@@ -151,8 +169,19 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
             const animateStep=(currentTime)=>{
                 if(!window.isAutoRouteRunning){cancelAnimationFrame(animationId);return;}
                 const elapsed=currentTime-startTime;
-                const progress=Math.min(elapsed/totalDuration,1);
-                const currentDistance=progress*totalLength;
+                
+                // Расчёт расстояния с учётом двухфазной скорости
+                let currentDistance;
+                if(elapsed<=slowDuration){
+                    // Первые 3 секунды: низкая скорость
+                    currentDistance=slowSpeed*(elapsed/1000);
+                }else{
+                    // После 3 секунд: низкая + высокая
+                    currentDistance=slowDistance+fastSpeed*((elapsed-slowDuration)/1000);
+                }
+                currentDistance=Math.min(currentDistance,totalLength);
+                
+                const progress=currentDistance/totalLength;
 
                 // Интерполяция позиции для индикатора
                 const currentPoint=getPointAlongLine(createLineString(validPts),currentDistance);
@@ -167,13 +196,15 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
 
             // Запускаем анимацию индикатора
             animationId=requestAnimationFrame(animateStep);
-            
-            // Перемещаем карту по отрезкам (1 вызов на отрезок) + поворот при смене направления
-            let currentSegIndex=0;
 
+            // Перемещаем карту по отрезкам с учётом двухфазной скорости
+            let currentSegIndex=0;
+            let segStartTime=startTime;
+            let segDistanceAtStart=0;
+            
             const animateSegment=()=>{
                 console.log('[AutoRoute] animateSegment:', currentSegIndex, 'из', validPts.length-1);
-                
+
                 if(!window.isAutoRouteRunning||currentSegIndex>=validPts.length-1){
                     console.log('[AutoRoute] Завершение маршрута');
                     cancelAnimationFrame(animationId);
@@ -183,7 +214,27 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
 
                 const p1=validPts[currentSegIndex];
                 const p2=validPts[currentSegIndex+1];
-                const segDuration=(segLengths[currentSegIndex]/totalLength)*totalDuration;
+                const segLength=segLengths[currentSegIndex];
+                
+                // Расчёт времени сегмента с учётом двухфазной скорости
+                const distAtSegEnd=segDistanceAtStart+segLength;
+                let timeAtSegStart,timeAtSegEnd;
+                
+                // Время начала сегмента
+                if(segDistanceAtStart<=slowDistance){
+                    timeAtSegStart=(segDistanceAtStart/slowSpeed)*1000;
+                }else{
+                    timeAtSegStart=slowDuration+((segDistanceAtStart-slowDistance)/fastSpeed)*1000;
+                }
+                
+                // Время конца сегмента
+                if(distAtSegEnd<=slowDistance){
+                    timeAtSegEnd=(distAtSegEnd/slowSpeed)*1000;
+                }else{
+                    timeAtSegEnd=slowDuration+((distAtSegEnd-slowDistance)/fastSpeed)*1000;
+                }
+                
+                const segDuration=timeAtSegEnd-timeAtSegStart;
 
                 // Вычисляем угол направления этого сегмента
                 const segAngle=angleFromCoordinate(p1,p2);
@@ -193,12 +244,12 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
 
                 // Получаем текущий азимут карты и конвертируем в градусы
                 const currentMapAzimuth=(APP.map.azimuth||0)*(180/Math.PI);
-                
+
                 // Вычисляем минимальную разницу поворота
                 let azimuthDiff=targetAzimuth-currentMapAzimuth;
                 if(azimuthDiff>180)azimuthDiff-=360;
                 if(azimuthDiff<-180)azimuthDiff+=360;
-                
+
                 // Новый азимут с учётом минимального пути
                 const newAzimuth=currentMapAzimuth+azimuthDiff;
 
@@ -210,11 +261,12 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                         easing:'linear'
                     },
                     camera:{
-                        azimuth:newAzimuth*(Math.PI/180),  // Поворот карты по направлению
-                        duration:segDuration  // Синхронно с перемещением
+                        azimuth:newAzimuth*(Math.PI/180),
+                        duration:segDuration
                     }
                 });
 
+                segDistanceAtStart=distAtSegEnd;
                 currentSegIndex++;
                 setTimeout(animateSegment,segDuration);
             };
@@ -251,6 +303,7 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                     const t=i/segments;
                     transitionPts.push([prevPoint[0]+(currentStart[0]-prevPoint[0])*t,prevPoint[1]+(currentStart[1]-prevPoint[1])*t]);
                 }
+                // Переходный сегмент — без замедления
                 this.animateAlongPath(transitionPts,this.speed,()=>{
                     if(!this.isRunning)return;
                     this.isTransition=false;
@@ -258,8 +311,9 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                     if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
                     // Индикатор достиг НАЧАЛА пути (первой точки) - воспроизводим команду
                     if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
-                    this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();},3500);
-                },0);
+                    // Основной сегмент точки — с замедлением
+                    this.animateAlongPath(p.pts,this.speed,()=>{if(!this.isRunning)return;this.currentIndex++;this.playSegment();},3500,true);
+                },0,false);
                 return;
             }
         }
@@ -269,10 +323,11 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         if(typeof updateHud==='function')updateHud();if(typeof renderRoutePoints==='function')renderRoutePoints();
         // Индикатор достиг НАЧАЛА пути (первой точки) - воспроизводим команду
         if(p.cmd&&typeof playCommand==='function')playCommand(p.cmd);
+        // Первый сегмент точки — с замедлением
         this.animateAlongPath(p.pts,this.speed,()=>{
             if(!this.isRunning)return;
             this.currentIndex++;
             this.playSegment();
-        },3500);
+        },3500,true);
     }
 };
