@@ -82,7 +82,7 @@
 // КОНФИГУРАЦИЯ
 // ============================================
 const COLORS={Gold:{hex:'#FFD700'},Blue:{hex:'#007AFF'},Red:{hex:'#F33'},Fuchsia:{hex:'#AF52DE'},Orange:{hex:'#F90'},Purple:{hex:'#5856D6'},Cyan:{hex:'#5CF'},Brown:{hex:'#A2845E'},Lime:{hex:'#3C7'}};
-const APP={map:null,userMarker:null,userMarkerEl:null,lastPos:null,lastAz:0,autoCenter:false,currentSpeed:0,navPoints:[],navCurrentIndex:0,navPreviewIndex:-1,navAudio:new Audio(),navConfig:{TRIGGER_DIST:25,AZ_TOLERANCE:45,SPEED_THRESHOLD:2}};
+const APP={map:null,userMarker:null,userMarkerEl:null,lastPos:null,lastAz:0,autoCenter:false,currentSpeed:0,navPoints:[],navCurrentIndex:0,navPreviewIndex:-1,navAudio:new Audio(),navConfig:{TRIGGER_DIST:25,AZ_TOLERANCE:45,SPEED_THRESHOLD:2},markerRotation:0,compassRotation:0};
 window.APP=APP;
 const $=id=>document.getElementById(id);
 const toRad=deg=>deg*Math.PI/180;
@@ -129,9 +129,12 @@ function updateUserMarkerRotation(){
     if(arrowEl){
         // Получаем азимут карты в градусах
         const mapAz=(APP.map.azimuth||0)*(180/Math.PI);
-        // Поворот = азимут движения - азимут карты (компенсация поворота карты)
-        const rotation=APP.lastAz-mapAz;
-        arrowEl.setAttribute('transform',`rotate(${rotation},20,20)`);
+        // Целевой угол = азимут движения - азимут карты
+        let targetRotation=APP.lastAz-mapAz;
+        // Нормализуем дельту по кратчайшему пути (-180...180)
+        let delta=((targetRotation-APP.markerRotation+180)%360)-180;
+        APP.markerRotation+=delta;
+        arrowEl.setAttribute('transform',`rotate(${APP.markerRotation},20,20)`);
     }
 }
 
@@ -153,7 +156,11 @@ function initGeolocation(){
             let ad=Math.abs(APP.lastAz-t.az)%360;if(ad>180)ad=360-ad;
             const compass=$('hudCompass'),userArrow=$('hudUserArrow'),targetArrow=$('hudTargetArrow');
             if(compass&&userArrow&&targetArrow){
-                userArrow.style.transform=`rotate(${APP.lastAz}deg)`;targetArrow.style.transform=`rotate(${t.az}deg)`;
+                // Нормализуем поворот стрелки компаса по кратчайшему пути
+                let delta=((APP.lastAz-APP.compassRotation+180)%360)-180;
+                APP.compassRotation+=delta;
+                userArrow.style.transform=`rotate(${APP.compassRotation}deg)`;
+                targetArrow.style.transform=`rotate(${t.az}deg)`;
                 compass.classList.toggle('in-range',ad<=APP.navConfig.AZ_TOLERANCE);
             }
         }
@@ -234,7 +241,13 @@ function updateHud(){
     if(APP.lastPos){
         const d=calcDistance(APP.lastPos,t.pts[0]);let ad=Math.abs(APP.lastAz-t.az)%360;if(ad>180)ad=360-ad;
         $('hudDist').textContent=`${Math.round(d)}`;$('hudDist').classList.toggle('in-range',d<=APP.navConfig.TRIGGER_DIST);
-        const userArrow=$('hudUserArrow');if(userArrow&&targetArrow){userArrow.style.transform=`rotate(${APP.lastAz||0}deg)`;targetArrow.style.transform=`rotate(${t.az||0}deg)`;}
+        const userArrow=$('hudUserArrow');if(userArrow&&targetArrow){
+            // Нормализуем поворот стрелки компаса по кратчайшему пути
+            let delta=((APP.lastAz-APP.compassRotation+180)%360)-180;
+            APP.compassRotation+=delta;
+            userArrow.style.transform=`rotate(${APP.compassRotation}deg)`;
+            targetArrow.style.transform=`rotate(${t.az||0}deg)`;
+        }
         if(compass)compass.classList.toggle('in-range',ad<=APP.navConfig.AZ_TOLERANCE);
     }else if(!isPreview){$('hudDist').textContent='---';$('hudDist').classList.remove('in-range');}
     else{$('hudDist').textContent='---';$('hudDist').classList.remove('in-range');$('hudCompass').classList.remove('in-range');}
@@ -247,7 +260,13 @@ function updateHud(){
 function updateHudDist(d,ad){
     $('hudDist').textContent=`${Math.round(d)}`;$('hudDist').classList.toggle('in-range',d<=APP.navConfig.TRIGGER_DIST);
     const compass=$('hudCompass'),userArrow=$('hudUserArrow'),targetArrow=$('hudTargetArrow'),idx=APP.navPreviewIndex>=0?APP.navPreviewIndex:APP.navCurrentIndex,targetPoint=APP.navPoints[idx];
-    if(userArrow&&targetArrow&&targetPoint){userArrow.style.transform=`rotate(${APP.lastAz||0}deg)`;targetArrow.style.transform=`rotate(${targetPoint.az||0}deg)`;}
+    if(userArrow&&targetArrow&&targetPoint){
+        // Нормализуем поворот стрелки компаса по кратчайшему пути
+        let delta=((APP.lastAz-APP.compassRotation+180)%360)-180;
+        APP.compassRotation+=delta;
+        userArrow.style.transform=`rotate(${APP.compassRotation}deg)`;
+        targetArrow.style.transform=`rotate(${targetPoint.az||0}deg)`;
+    }
     if(compass)compass.classList.toggle('in-range',ad<=APP.navConfig.AZ_TOLERANCE);
 }
 
