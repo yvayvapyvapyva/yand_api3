@@ -372,9 +372,9 @@ async function initMap(){
     // Проверка на мобильное устройство
     const isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)||('ontouchstart'in window);
     
-    // Для мобильных добавляем больше жестов
+    // Для мобильных добавляем поворот двумя пальцами
     const behaviors=isMobile?
-        ['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom','pinchRotate','pinchTilt']:
+        ['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom','pinchRotate']:
         ['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom'];
     
     APP.map=new YMap(document.getElementById('map'),{location:{center:[43.9332,56.3399],zoom:17,tilt:0},behaviors},[new YMapDefaultSchemeLayer({}),new YMapDefaultFeaturesLayer({})]);
