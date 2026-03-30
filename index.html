@@ -368,7 +368,15 @@ async function initMap(){
     await ymaps3.ready;
     const{YMap,YMapDefaultSchemeLayer,YMapDefaultFeaturesLayer,YMapControls}=ymaps3;
     ymaps3.import.registerCdn('https://cdn.jsdelivr.net/npm/{package}','@yandex/ymaps3-default-ui-theme@latest');
-    const behaviors=['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom'];
+    
+    // Проверка на мобильное устройство
+    const isMobile=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)||('ontouchstart'in window);
+    
+    // Для мобильных добавляем больше жестов
+    const behaviors=isMobile?
+        ['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom','pinchRotate','pinchTilt']:
+        ['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom'];
+    
     APP.map=new YMap(document.getElementById('map'),{location:{center:[43.9332,56.3399],zoom:17,tilt:0},behaviors},[new YMapDefaultSchemeLayer({}),new YMapDefaultFeaturesLayer({})]);
     const userMarkerEl=document.createElement('div');userMarkerEl.style.cssText='width:40px;height:40px;position:relative;transform:translate(-50%,-50%);cursor:pointer;';
     userMarkerEl.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><g id="user-arrow"><path d="M20,4 L32,34 L20,28 L8,34 Z" fill="#F33" stroke="white" stroke-width="2"/></g></svg>`;
