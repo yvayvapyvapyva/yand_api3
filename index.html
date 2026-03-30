@@ -357,7 +357,6 @@ function initWakeVideo(){
 
 function startWakeLock(){
     initWakeVideo();if(wakeVideo&&wakeCanvasStream){wakeVideo.srcObject=wakeCanvasStream;wakeVideo.play().catch(e=>console.log('Wake video error:',e));}
-    if('vibrate' in navigator)navigator.vibrate(0);
     if(wakeLockInterval)clearInterval(wakeLockInterval);
     wakeLockInterval=setInterval(()=>{
         if(wakeVideo&&wakeVideo.paused)wakeVideo.play().catch(e=>console.log('Wake video restart error:',e));
