@@ -10,7 +10,7 @@ function getLineLength(ls){const c=ls.geometry.coordinates;let t=0;for(let i=0;i
 function getPointAlongLine(ls,dist){const c=ls.geometry.coordinates;let traveled=0;for(let i=0;i<c.length-1;i++){const p1=c[i],p2=c[i+1],segDist=_calcDistance(p1,p2);if(traveled+segDist>=dist){const r=(dist-traveled)/segDist;return{geometry:{coordinates:[p1[0]+(p2[0]-p1[0])*r,p1[1]+(p2[1]-p1[1])*r]}};}traveled+=segDist;}return{geometry:{coordinates:c[c.length-1]}};}
 
 // Индикатор авто-ведения (стрелка)
-let autoIndicatorMarker=null,autoIndicatorVisible=false,prevCoords=null,autoIndicatorEl=null;
+let autoIndicatorMarker=null,autoIndicatorVisible=false,prevCoords=null,autoIndicatorEl=null,currentRotation=0;
 
 // Вычисление угла между двумя точками (как в примере Yandex Progress)
 function angleFromCoordinate(p1,p2){
@@ -47,15 +47,28 @@ function updateAutoIndicator(coords){
         APP.map.addChild(autoIndicatorMarker);
         autoIndicatorVisible=true;
         prevCoords=coords;
+        currentRotation=0;
         console.log('[Indicator] Создан');
         return;
     }
     if(!autoIndicatorVisible){APP.map.addChild(autoIndicatorMarker);autoIndicatorVisible=true;console.log('[Indicator] Добавлен');}
     
-    // Вычисляем угол поворота и вращаем изображение
+    // Вычисляем угол поворота с кратчайшим путём
     if(prevCoords&&!(prevCoords[0]===coords[0]&&prevCoords[1]===coords[1])&&autoIndicatorEl){
-        const angle=angleFromCoordinate(prevCoords,coords);
-        autoIndicatorEl.style.transform=`rotate(${angle}deg)`;
+        const targetAngle=angleFromCoordinate(prevCoords,coords);
+        
+        // Вычисляем минимальную разницу углов
+        let angleDiff=targetAngle-(currentRotation%360);
+        
+        // Нормализуем разницу (-180° до +180°)
+        if(angleDiff>180)angleDiff-=360;
+        if(angleDiff<-180)angleDiff+=360;
+        
+        // Обновляем текущее вращение
+        currentRotation+=angleDiff;
+        
+        // Применяем вращение
+        autoIndicatorEl.style.transform=`rotate(${currentRotation}deg)`;
     }
     prevCoords=coords;
     
