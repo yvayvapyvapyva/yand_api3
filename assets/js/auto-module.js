@@ -78,17 +78,37 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                 const actualSpeed=routeLength<(speed*minDuration/1000)?(routeLength/(minDuration/1000)):speed;
                 duration=(routeLength/actualSpeed)*1000;
             }
+            // ПРЕДВАРИТЕЛЬНЫЙ РАСЧЁТ: кэшируем длины сегментов
+            const segmentLengths=[];
+            const cumulativeLengths=[0];
+            let totalLen=0;
+            for(let i=0;i<validPts.length-1;i++){
+                const len=_calcDistance(validPts[i],validPts[i+1]);
+                segmentLengths.push(len);
+                totalLen+=len;
+                cumulativeLengths.push(totalLen);
+            }
             const startTime=performance.now();let animationId=null;
+            let currentSegmentIndex=0;
             const animateStep=(currentTime)=>{
                 if(!window.isAutoRouteRunning){cancelAnimationFrame(animationId);return;}
                 const elapsed=currentTime-startTime,t=Math.min(elapsed/duration,1),currentDistance=t*routeLength;
                 try{
-                    const cp=getPointAlongLine(ls,currentDistance);
-                    if(cp?.geometry?.coordinates?.length===2){
-                        const coords=cp.geometry.coordinates;
-                        APP.map.update({location:{center:coords}});
-                        updateAutoIndicator(coords);
+                    // ОПТИМИЗАЦИЯ: ищем сегмент начиная с текущего (не с начала!)
+                    while(currentSegmentIndex<cumulativeLengths.length-1&&
+                          currentDistance>cumulativeLengths[currentSegmentIndex+1]){
+                        currentSegmentIndex++;
                     }
+                    // Интерполируем точку внутри сегмента
+                    const segStart=cumulativeLengths[currentSegmentIndex];
+                    const segEnd=cumulativeLengths[currentSegmentIndex+1];
+                    const segLen=segEnd-segStart;
+                    const segT=segLen>0?(currentDistance-segStart)/segLen:0;
+                    const p1=validPts[currentSegmentIndex];
+                    const p2=validPts[currentSegmentIndex+1];
+                    const coords=[p1[0]+(p2[0]-p1[0])*segT,p1[1]+(p2[1]-p1[1])*segT];
+                    APP.map.update({location:{center:coords}});
+                    updateAutoIndicator(coords);
                 }catch(e){}
                 if(t<1){animationId=requestAnimationFrame(animateStep);}else{if(onComplete)onComplete();}
             };
