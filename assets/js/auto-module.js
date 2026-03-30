@@ -87,6 +87,11 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         this.isTransition=false;
         // Флаг первого запуска - не создавать переход от предыдущей точки
         this.isFirstStart=true;
+        // Устанавливаем наклон карты 50°
+        mapAzimuth=(APP.map.azimuth||0)*(180/Math.PI);
+        if(APP.map){
+            APP.map.update({camera:{tilt:50*(Math.PI/180),duration:500}});
+        }
         if(this.btn){this.btn.classList.add('active');this.btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';}
         // Показываем индикатор на ПЕРВОЙ ТОЧКЕ ПУТИ выбранной метки
         const currentPoint=appRef.navPoints[this.currentIndex];
@@ -102,6 +107,10 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
         if(this.timeout){clearTimeout(this.timeout);this.timeout=null;}
         if(this.btn){this.btn.classList.remove('active');this.btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';}
         this.currentIndex=0;this.isTransition=false;this.isFirstStart=false;
+        // Сбрасываем наклон карты на 0°
+        if(APP.map){
+            APP.map.update({camera:{tilt:0*(Math.PI/180),duration:500}});
+        }
         hideAutoIndicator();
     },
     animateAlongPath(pts,speed=25,onComplete=null,minDuration=3500){

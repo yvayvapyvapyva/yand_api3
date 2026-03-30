@@ -63,7 +63,7 @@
 <button id="listBtn" class="circle-btn" aria-label="Список точек"><svg viewBox="0 0 24 24"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg></button>
 <button id="locateBtn" class="circle-btn" aria-label="Геолокация"><svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></button>
 <button id="autoRouteBtn" class="circle-btn" title="Ведение по маршруту" aria-label="Авто-ведение"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
-<div id="telemetryPanel"><div class="tel-item"><span class="tel-label">КМ/Ч</span><span class="tel-value" id="telSpeed">0</span></div></div>
+<div id="telemetryPanel" class="visible"><div class="tel-item"><span class="tel-label">КМ/Ч</span><span class="tel-value" id="telSpeed">0</span></div></div>
 <div id="hud">
     <div id="commentBlock"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div id="commentText"></div><button id="closeCommentBtn">×</button></div></div>
     <div class="hud-header"><span class="hud-index" id="hudIndex">1</span><div class="hud-cmd" id="hudCmd">Маршрут не выбран</div><button id="speakBtn" class="action-icon-btn" aria-label="Воспроизвести"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg></button></div>
@@ -368,10 +368,10 @@ async function initMap(){
     await ymaps3.ready;
     const{YMap,YMapDefaultSchemeLayer,YMapDefaultFeaturesLayer,YMapControls}=ymaps3;
     ymaps3.import.registerCdn('https://cdn.jsdelivr.net/npm/{package}','@yandex/ymaps3-default-ui-theme@latest');
-    const{YMapTiltControl,YMapRotateControl,YMapRotateTiltControl}=await ymaps3.import('@yandex/ymaps3-default-ui-theme');
+    const{YMapRotateTiltControl}=await ymaps3.import('@yandex/ymaps3-default-ui-theme');
     const behaviors=['drag','scrollZoom','dblClick','mouseTilt','mouseRotate','pinchZoom'];
     APP.map=new YMap(document.getElementById('map'),{location:{center:[43.9332,56.3399],zoom:17,tilt:0},behaviors},[new YMapDefaultSchemeLayer({}),new YMapDefaultFeaturesLayer({})]);
-    APP.map.addChild(new YMapControls({position:'right'},[new YMapRotateTiltControl({}),new YMapRotateControl({}),new YMapTiltControl({})]));
+    APP.map.addChild(new YMapControls({position:'right'},[new YMapRotateTiltControl({})]));
     const userMarkerEl=document.createElement('div');userMarkerEl.style.cssText='width:40px;height:40px;position:relative;transform:translate(-50%,-50%);cursor:pointer;';
     userMarkerEl.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><g id="user-arrow"><path d="M20,4 L32,34 L20,28 L8,34 Z" fill="#F33" stroke="white" stroke-width="2"/></g></svg>`;
     APP.userMarker=new ymaps3.YMapMarker({coordinates:[43.9332,56.3399],zIndex:5000},userMarkerEl);APP.userMarkerEl=userMarkerEl;APP.map.addChild(APP.userMarker);
