@@ -9,23 +9,57 @@ function createLineString(coords){return{geometry:{coordinates:coords}};}
 function getLineLength(ls){const c=ls.geometry.coordinates;let t=0;for(let i=0;i<c.length-1;i++)t+=_calcDistance(c[i],c[i+1]);return t;}
 function getPointAlongLine(ls,dist){const c=ls.geometry.coordinates;let traveled=0;for(let i=0;i<c.length-1;i++){const p1=c[i],p2=c[i+1],segDist=_calcDistance(p1,p2);if(traveled+segDist>=dist){const r=(dist-traveled)/segDist;return{geometry:{coordinates:[p1[0]+(p2[0]-p1[0])*r,p1[1]+(p2[1]-p1[1])*r]}};}traveled+=segDist;}return{geometry:{coordinates:c[c.length-1]}};}
 
-// Индикатор авто-ведения
-let autoIndicatorMarker=null,autoIndicatorVisible=false;
+// Индикатор авто-ведения (стрелка)
+let autoIndicatorMarker=null,autoIndicatorVisible=false,prevCoords=null,autoIndicatorEl=null;
 
-// Создание и обновление индикатора
+// Вычисление угла между двумя точками (как в примере Yandex Progress)
+function angleFromCoordinate(p1,p2){
+    const toRad=d=>d*Math.PI/180;
+    const toDeg=r=>r*180/Math.PI;
+    const dLon=toRad(p2[0]-p1[0]);
+    const y=Math.sin(dLon)*Math.cos(toRad(p2[1]));
+    const x=Math.cos(toRad(p1[1]))*Math.sin(toRad(p2[1]))-Math.sin(toRad(p1[1]))*Math.cos(toRad(p2[1]))*Math.cos(dLon);
+    let deg=Math.atan2(y,x);
+    deg=toDeg(deg);
+    return(deg+360)%360;
+}
+
+// Создание и обновление индикатора-стрелки
 function updateAutoIndicator(coords){
     if(!APP.map||!coords)return;
     if(!autoIndicatorMarker){
-        const indicatorEl=document.createElement('div');
-        indicatorEl.style.cssText='width:16px;height:16px;background:#F33;border:3px solid #fff;border-radius:50%;box-shadow:0 0 10px rgba(255,0,0,0.8),0 0 20px rgba(255,0,0,0.4);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);';
-        indicatorEl.innerHTML='<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:rgba(255,255,255,0.8);border-radius:50%"></div>';
-        autoIndicatorMarker=new ymaps3.YMapMarker({coordinates:coords,zIndex:10000},indicatorEl);
+        // Создаём контейнер
+        const markerElement=document.createElement('div');
+        markerElement.style.cssText='position:absolute;transform:translate(-50%,-50%);';
+        
+        // Создаём стрелку (PNG изображение)
+        const markerElementImg=document.createElement('img');
+        markerElementImg.id='marker';
+        markerElementImg.src='assets/images/marker-red.png';
+        markerElementImg.style.cssText='width:40px;height:40px;display:block;transition:transform 0.1s linear;';
+        markerElement.appendChild(markerElementImg);
+        
+        // Сохраняем ссылку на элемент для доступа к вращению
+        autoIndicatorEl=markerElementImg;
+        
+        // Создаём маркер
+        autoIndicatorMarker=new ymaps3.YMapMarker({coordinates:coords,zIndex:10000},markerElement);
         APP.map.addChild(autoIndicatorMarker);
         autoIndicatorVisible=true;
+        prevCoords=coords;
         console.log('[Indicator] Создан');
         return;
     }
     if(!autoIndicatorVisible){APP.map.addChild(autoIndicatorMarker);autoIndicatorVisible=true;console.log('[Indicator] Добавлен');}
+    
+    // Вычисляем угол поворота и вращаем изображение
+    if(prevCoords&&!(prevCoords[0]===coords[0]&&prevCoords[1]===coords[1])&&autoIndicatorEl){
+        const angle=angleFromCoordinate(prevCoords,coords);
+        autoIndicatorEl.style.transform=`rotate(${angle}deg)`;
+    }
+    prevCoords=coords;
+    
+    // Обновляем координаты
     autoIndicatorMarker.update({coordinates:coords});
 }
 
