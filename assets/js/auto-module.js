@@ -190,13 +190,17 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
 
                 // ИНВЕРТИРУЕМ угол для камеры: чтобы машинка ехала вверх экрана
                 let targetAzimuth=-segAngle;
+
+                // Получаем текущий азимут карты и конвертируем в градусы
+                const currentMapAzimuth=(APP.map.azimuth||0)*(180/Math.PI);
                 
-                // Поворачиваем карту через кратчайший путь
-                mapAzimuth=smoothRotate(mapAzimuth,targetAzimuth);
+                // Вычисляем минимальную разницу поворота
+                let azimuthDiff=targetAzimuth-currentMapAzimuth;
+                if(azimuthDiff>180)azimuthDiff-=360;
+                if(azimuthDiff<-180)azimuthDiff+=360;
                 
-                // Нормализуем mapAzimuth (-360° до +360°) для предотвращения переполнения
-                while(mapAzimuth>360)mapAzimuth-=360;
-                while(mapAzimuth<-360)mapAzimuth+=360;
+                // Новый азимут с учётом минимального пути
+                const newAzimuth=currentMapAzimuth+azimuthDiff;
 
                 // Перемещаем карту с анимацией + поворот
                 APP.map.update({
@@ -206,7 +210,7 @@ const AutoRouteModule={currentIndex:0,speed:25,timeout:null,isRunning:false,btn:
                         easing:'linear'
                     },
                     camera:{
-                        azimuth:mapAzimuth*(Math.PI/180),  // Поворот карты по направлению
+                        azimuth:newAzimuth*(Math.PI/180),  // Поворот карты по направлению
                         duration:segDuration  // Синхронно с перемещением
                     }
                 });
