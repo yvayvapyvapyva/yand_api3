@@ -795,9 +795,7 @@ function addP(coords, data = null, silent = false) {
 const startDrawingForPoint = (p, isNewPoint = false) => {
     isAdd = false;
     isDrawing = true;
-    $('addText').textContent = "Рисуйте путь...";
-    $('addMarkerBtn').classList.remove('active');
-    $('addMarkerBtn').classList.add('drawing');
+    $('addMarkerBtn').style.display = 'none';
     $('finishDrawingBtn').style.display = 'flex';
     cur = p;
     setActivePoint(p, !isNewPoint);
@@ -817,8 +815,7 @@ const stopDrawingMode = () => {
         updateSaveState();
     }
     isDrawing = false;
-    $('addText').textContent = "Добавить новую точку";
-    $('addMarkerBtn').classList.remove('drawing');
+    $('addMarkerBtn').style.display = 'flex';
     $('finishDrawingBtn').style.display = 'none';
     document.getElementById('map').style.cursor = 'grab';
     cur = null;
