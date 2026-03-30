@@ -355,18 +355,12 @@ function initWakeVideo(){
     if(!wakeCanvas){wakeCanvas=document.createElement('canvas');wakeCanvas.width=1;wakeCanvas.height=1;const ctx=wakeCanvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,1,1);if(wakeCanvas.captureStream)wakeCanvasStream=wakeCanvas.captureStream(30);else if(wakeCanvas.mozCaptureStream)wakeCanvasStream=wakeCanvas.mozCaptureStream(30);}
 }
 
-function initAudioContext(){
-    if(typeof AudioContext!=='undefined'){const audioCtx=new(window.AudioContext||window.webkitAudioContext)(),oscillator=audioCtx.createOscillator(),gainNode=audioCtx.createGain();gainNode.gain.value=0;oscillator.connect(gainNode);gainNode.connect(audioCtx.destination);oscillator.start();setTimeout(()=>oscillator.stop(),100);return audioCtx;}
-    return null;
-}
-
 function startWakeLock(){
     initWakeVideo();if(wakeVideo&&wakeCanvasStream){wakeVideo.srcObject=wakeCanvasStream;wakeVideo.play().catch(e=>console.log('Wake video error:',e));}
-    const audioCtx=initAudioContext();if('vibrate' in navigator)navigator.vibrate(0);
+    if('vibrate' in navigator)navigator.vibrate(0);
     if(wakeLockInterval)clearInterval(wakeLockInterval);
     wakeLockInterval=setInterval(()=>{
         if(wakeVideo&&wakeVideo.paused)wakeVideo.play().catch(e=>console.log('Wake video restart error:',e));
-        if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
         if(wakeCanvas){const ctx=wakeCanvas.getContext('2d');ctx.fillStyle='#'+Math.floor(Math.random()*16777215).toString(16);ctx.fillRect(0,0,1,1);}
     },3000);
 }
